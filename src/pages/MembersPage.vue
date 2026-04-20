@@ -1,7 +1,7 @@
 <template>
   <v-container class="py-6">
     <div class="d-flex align-center justify-space-between mb-6">
-      <h1 class="text-h5 font-weight-bold">Membros do Escritório</h1>
+      <h1 class="text-h5 font-weight-bold">Equipe</h1>
       <v-btn
         v-if="canManage"
         color="primary"
