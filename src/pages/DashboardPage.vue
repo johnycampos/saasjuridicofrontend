@@ -8,7 +8,12 @@
           <v-card-text>
             <v-icon size="32" :color="group.cor || 'primary'">mdi-folder</v-icon>
             <h3 class="text-h6 mt-2">{{ group.nome }}</h3>
-            <p class="text-body-2 text-medium-emphasis">{{ group.descricao || 'Sem descrição' }}</p>
+            <div class="d-flex align-center justify-space-between mt-1">
+              <p class="text-body-2 text-medium-emphasis mb-0">{{ group.descricao || 'Sem descrição' }}</p>
+              <v-chip size="x-small" color="primary" variant="tonal" class="ml-2">
+                {{ group.totalProcessos }} {{ group.totalProcessos === 1 ? 'processo' : 'processos' }}
+              </v-chip>
+            </div>
           </v-card-text>
           <v-card-actions>
             <v-btn variant="text" size="small">Abrir Board</v-btn>

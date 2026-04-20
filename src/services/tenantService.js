@@ -5,6 +5,9 @@ export const tenantService = {
   getById(id) { return api.get(`/tenants/${id}`) },
   update(id, data) { return api.put(`/tenants/${id}`, data) },
   getMembers(id, params) { return api.get(`/tenants/${id}/members`, { params }) },
+  addMember(tenantId, email, role) {
+    return api.post(`/tenants/${tenantId}/members`, { email, role })
+  },
   updateMemberRole(tenantId, userId, role) {
     return api.put(`/tenants/${tenantId}/members/${userId}/role`, { role })
   },

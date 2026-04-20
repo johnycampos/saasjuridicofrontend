@@ -32,7 +32,7 @@
           item-key="id"
           class="pa-2 d-flex flex-column ga-2"
           style="min-height: 60px"
-          @end="onDragEnd"
+          @add="onCardAdded"
         >
           <template #item="{ element: processo }">
             <KanbanCard :processo="processo" @click="$emit('card-click', processo)" />
@@ -60,17 +60,16 @@ const props = defineProps({
 
 const emit = defineEmits(['card-click', 'card-moved', 'add-processo', 'edit-column', 'delete-column'])
 
-function onDragEnd(event) {
-  if (event.from !== event.to) {
-    const processoEl = event.item.__draggable_context?.element
-    if (processoEl) {
-      emit('card-moved', {
-        processoId: processoEl.id,
-        fromColumnId: processoEl.columnId,
-        toColumnId: props.column.id,
-        newIndex: event.newIndex
-      })
-    }
+// @add dispara na coluna DESTINO quando um card chega de outra coluna
+function onCardAdded(event) {
+  const processoEl = event.item.__draggable_context?.element
+  if (processoEl) {
+    emit('card-moved', {
+      processoId: processoEl.id,
+      fromColumnId: processoEl.columnId,  // ainda tem o ID antigo
+      toColumnId: props.column.id,        // coluna destino (correta)
+      newIndex: event.newIndex
+    })
   }
 }
 </script>

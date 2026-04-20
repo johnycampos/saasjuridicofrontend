@@ -47,6 +47,7 @@ router.beforeEach((to, from, next) => {
     if (to.query.tenantId) {
       authStore.setCurrentTenant(to.query.tenantId)
     }
+    authStore.fetchMe()
     next({ path: to.path, replace: true })
     return
   }

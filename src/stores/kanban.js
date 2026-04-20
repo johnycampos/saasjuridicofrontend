@@ -43,18 +43,14 @@ export const useKanbanStore = defineStore('kanban', () => {
   }
 
   async function moveProcesso(processoId, fromColumnId, toColumnId, newPosition) {
-    await processoService.move(processoId, toColumnId, newPosition)
-
-    const fromCol = columns.value.find(c => c.id === fromColumnId)
+    // vuedraggable já moveu o item entre os arrays via v-model
+    // só atualiza o columnId no objeto em memória e persiste no backend
     const toCol = columns.value.find(c => c.id === toColumnId)
-    if (!fromCol || !toCol) return
-
-    const idx = fromCol.processos.findIndex(p => p.id === processoId)
-    if (idx === -1) return
-
-    const [processo] = fromCol.processos.splice(idx, 1)
-    processo.columnId = toColumnId
-    toCol.processos.splice(newPosition ?? toCol.processos.length, 0, processo)
+    if (toCol) {
+      const processo = toCol.processos.find(p => p.id === processoId)
+      if (processo) processo.columnId = toColumnId
+    }
+    await processoService.move(processoId, toColumnId, newPosition)
   }
 
   function addProcesso(processo) {
