@@ -8,6 +8,7 @@ export const authService = {
     return api.post('/auth/refresh', { refreshToken })
   },
   getGoogleLoginUrl() {
-    return '/oauth2/authorization/google'
+    const base = import.meta.env.VITE_API_URL || ''
+    return `${base}/oauth2/authorization/google`
   }
 }
