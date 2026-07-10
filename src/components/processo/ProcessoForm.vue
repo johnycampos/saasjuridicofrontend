@@ -29,6 +29,7 @@
               no-filter
               clearable
               required
+              no-data-text="Digite um nome para buscar"
             >
               <template #append>
                 <v-btn icon="mdi-plus" size="small" variant="text" title="Novo cliente" @click="showClienteDialog = true" />

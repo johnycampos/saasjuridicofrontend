@@ -42,9 +42,9 @@
       <v-card border rounded="lg">
         <v-card-title>Próximo Prazo</v-card-title>
         <v-card-text>
-          <div v-if="processo.proximaTarefaPrazo" class="d-flex align-center">
+          <div v-if="proximaTarefaPrazoLocal" class="d-flex align-center">
             <v-icon :color="prazoColor" size="18" class="mr-1">mdi-clock-outline</v-icon>
-            <span class="text-body-2">{{ formatDate(processo.proximaTarefaPrazo) }}</span>
+            <span class="text-body-2">{{ formatDate(proximaTarefaPrazoLocal) }}</span>
           </div>
           <p v-else class="text-body-2 text-medium-emphasis">Nenhuma tarefa com prazo em aberto</p>
         </v-card-text>
@@ -163,9 +163,36 @@ const props = defineProps({
   processo: { type: Object, required: true }
 })
 
+const emit = defineEmits(['resumo-atualizado'])
+
+const ORDEM_PRIORIDADE = ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']
+
+// Calculado a partir das tarefas já carregadas neste componente (não da prop
+// `processo`, que só reflete o que o backend calculou na última vez que o
+// processo foi buscado pelo componente pai) — assim o card fica sempre em dia
+// assim que uma tarefa é criada/concluída, sem precisar trocar de tela.
+const proximaTarefaPrazoLocal = computed(() => {
+  const abertas = tarefas.value.filter(t => !t.concluida && t.prazo)
+  if (abertas.length === 0) return null
+  return abertas.reduce((min, t) => (t.prazo < min ? t.prazo : min), abertas[0].prazo)
+})
+
+const prioridadeMaisUrgenteLocal = computed(() => {
+  const abertas = tarefas.value.filter(t => !t.concluida && t.prioridade)
+  if (abertas.length === 0) return null
+  return abertas.reduce(
+    (max, t) => (ORDEM_PRIORIDADE.indexOf(t.prioridade) > ORDEM_PRIORIDADE.indexOf(max) ? t.prioridade : max),
+    abertas[0].prioridade
+  )
+})
+
+watch([proximaTarefaPrazoLocal, prioridadeMaisUrgenteLocal], ([prazo, prioridade]) => {
+  emit('resumo-atualizado', { proximaTarefaPrazo: prazo, prioridadeMaisUrgente: prioridade })
+})
+
 const prazoColor = computed(() => {
-  if (!props.processo?.proximaTarefaPrazo) return 'default'
-  const prazo = new Date(props.processo.proximaTarefaPrazo)
+  if (!proximaTarefaPrazoLocal.value) return 'default'
+  const prazo = new Date(proximaTarefaPrazoLocal.value)
   if (isAfter(new Date(), prazo)) return 'error'
   if (isAfter(addDays(new Date(), 3), prazo)) return 'warning'
   return 'success'

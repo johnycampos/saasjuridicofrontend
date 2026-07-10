@@ -1,0 +1,1 @@
+import{O as t}from"./index-4_CKjAUD.js";const n={list(e){return t.get("/clientes",{params:e})},create(e){return t.post("/clientes",e)},getById(e){return t.get(`/clientes/${e}`)},update(e,r){return t.put(`/clientes/${e}`,r)},processosFinanceiro(e){return t.get(`/clientes/${e}/processos`)}};export{n as c};

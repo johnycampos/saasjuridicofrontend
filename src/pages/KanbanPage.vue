@@ -124,8 +124,8 @@
             </p>
           </div>
           <v-spacer />
-          <v-chip :color="prioridadeColor(selectedProcesso.prioridade)" variant="tonal" class="mr-2">
-            {{ selectedProcesso.prioridade }}
+          <v-chip v-if="selectedProcesso.prioridadeMaisUrgente" :color="prioridadeColor(selectedProcesso.prioridadeMaisUrgente)" variant="tonal" class="mr-2">
+            {{ selectedProcesso.prioridadeMaisUrgente }}
           </v-chip>
           <v-btn color="primary" variant="outlined" class="mr-2" @click="editFromDetail">Editar</v-btn>
           <v-btn icon variant="text" @click="showProcessoDetail = false">
@@ -133,7 +133,7 @@
           </v-btn>
         </div>
         <v-card-text>
-          <ProcessoDetail :processo="selectedProcesso" />
+          <ProcessoDetail :processo="selectedProcesso" @resumo-atualizado="onResumoAtualizado" />
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -209,6 +209,13 @@ watch(groupId, id => { if (id) kanbanStore.loadBoard(id) })
 function openProcesso(processo) {
   selectedProcesso.value = processo
   showProcessoDetail.value = true
+}
+
+function onResumoAtualizado(resumo) {
+  if (!selectedProcesso.value) return
+  const atualizado = { ...selectedProcesso.value, ...resumo }
+  selectedProcesso.value = atualizado
+  kanbanStore.updateProcesso(atualizado)
 }
 
 function editFromDetail() {

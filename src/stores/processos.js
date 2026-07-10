@@ -33,5 +33,9 @@ export const useProcessosStore = defineStore('processos', () => {
     if (currentProcesso.value?.id === id) currentProcesso.value = null
   }
 
-  return { currentProcesso, loading, fetchById, create, update, remove }
+  function patchCurrentProcesso(patch) {
+    if (currentProcesso.value) currentProcesso.value = { ...currentProcesso.value, ...patch }
+  }
+
+  return { currentProcesso, loading, fetchById, create, update, remove, patchCurrentProcesso }
 })

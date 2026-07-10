@@ -26,15 +26,27 @@
         <div class="stat-num">{{ groups.length }}</div>
         <div class="stat-hint">áreas de prática</div>
       </div>
-      <div class="stat-card stat-card--cta" @click="router.push('/dashboard')">
+      <div
+        class="stat-card"
+        :class="{ 'stat-card--cta': resumo?.proximoPrazoData }"
+        :title="resumo?.proximoPrazoNumeroProcesso ? `Nº ${resumo.proximoPrazoNumeroProcesso}` : ''"
+      >
         <div class="stat-label">Prazos próximos</div>
-        <div class="stat-num stat-num--dash">—</div>
-        <div class="stat-hint">disponível no Kanban</div>
+        <template v-if="resumo?.proximoPrazoData">
+          <div class="stat-num" style="font-size: 20px">{{ resumo.proximoPrazoClienteNome || 'Sem cliente' }}</div>
+          <div class="stat-hint">{{ formatDate(resumo.proximoPrazoData) }}</div>
+        </template>
+        <template v-else>
+          <div class="stat-num stat-num--dash">—</div>
+          <div class="stat-hint">nenhuma tarefa com prazo em aberto</div>
+        </template>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Valor em causa</div>
-        <div class="stat-num stat-num--dash">—</div>
-        <div class="stat-hint">somado entre quadros</div>
+        <div class="stat-label">Valor em causa (pago)</div>
+        <div class="stat-num" :class="{ 'stat-num--dash': !resumo?.valorPagoTotal }">
+          {{ resumo?.valorPagoTotal ? formatValor(resumo.valorPagoTotal) : '—' }}
+        </div>
+        <div class="stat-hint">contratos quitados</div>
       </div>
     </div>
 
@@ -92,10 +104,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { useGroupsStore } from '@/stores/groups'
 import { useAuthStore } from '@/stores/auth'
+import { dashboardService } from '@/services/dashboardService'
 
 const router = useRouter()
 const groupsStore = useGroupsStore()
@@ -106,6 +121,8 @@ const loading = computed(() => groupsStore.loading)
 const totalProcessos = computed(() => groups.value.reduce((s, g) => s + (g.totalProcessos || 0), 0))
 const firstName = computed(() => authStore.user?.nome?.split(' ')[0] || '')
 
+const resumo = ref(null)
+
 const greeting = computed(() => {
   const h = new Date().getHours()
   if (h < 12) return 'Bom dia'
@@ -113,7 +130,27 @@ const greeting = computed(() => {
   return 'Boa noite'
 })
 
-onMounted(() => groupsStore.fetchGroups())
+function formatDate(d) {
+  return format(new Date(d), 'dd/MM/yyyy', { locale: ptBR })
+}
+
+function formatValor(n) {
+  const num = Number(n)
+  if (!num) return '—'
+  if (num >= 1_000_000) return `R$ ${(num / 1_000_000).toFixed(1).replace('.', ',')}M`
+  if (num >= 1_000) return `R$ ${Math.round(num / 1_000)}k`
+  return `R$ ${num.toLocaleString('pt-BR')}`
+}
+
+async function loadResumo() {
+  const response = await dashboardService.getResumo()
+  resumo.value = response.data
+}
+
+onMounted(() => {
+  groupsStore.fetchGroups()
+  loadResumo()
+})
 </script>
 
 <style scoped>
