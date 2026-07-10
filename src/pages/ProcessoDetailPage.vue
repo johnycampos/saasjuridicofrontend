@@ -15,8 +15,8 @@
         </p>
       </div>
       <v-spacer />
-      <v-chip :color="prioridadeColor" variant="tonal" class="mr-2">
-        {{ processo.prioridade }}
+      <v-chip v-if="processo.prioridadeMaisUrgente" :color="prioridadeColor" variant="tonal" class="mr-2">
+        {{ processo.prioridadeMaisUrgente }}
       </v-chip>
       <v-btn color="primary" variant="outlined" @click="showEditForm = true">Editar</v-btn>
     </div>
@@ -51,7 +51,7 @@ onMounted(() => processoStore.fetchById(route.params.id))
 
 const prioridadeColor = computed(() => ({
   BAIXA: 'success', MEDIA: 'info', ALTA: 'warning', URGENTE: 'error'
-}[processo.value?.prioridade] ?? 'default'))
+}[processo.value?.prioridadeMaisUrgente] ?? 'default'))
 
 function onSaved() {
   processoStore.fetchById(route.params.id)

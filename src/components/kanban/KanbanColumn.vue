@@ -60,6 +60,7 @@
         group="processos"
         item-key="id"
         class="col-drop"
+        :move="onMove"
         @add="onCardAdded"
       >
         <template #item="{ element: processo }">
@@ -103,6 +104,12 @@ function formatValor(n) {
   if (n >= 1_000_000) return `R$ ${(n / 1_000_000).toFixed(1).replace('.', ',')}M`
   if (n >= 1_000) return `R$ ${Math.round(n / 1_000)}k`
   return `R$ ${n.toLocaleString('pt-BR')}`
+}
+
+function onMove(evt) {
+  // a ordem dentro de uma coluna é sempre recalculada por urgência das
+  // tarefas — só permite o drag quando ele move o card para outra coluna
+  return evt.from !== evt.to
 }
 
 function onCardAdded(event) {

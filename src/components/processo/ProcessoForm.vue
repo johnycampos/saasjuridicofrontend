@@ -61,13 +61,6 @@
           <v-col cols="12" md="6">
             <v-text-field v-model="form.reu" label="Réu" />
           </v-col>
-          <v-col cols="12" md="6">
-            <v-select
-              v-model="form.prioridade"
-              label="Prioridade"
-              :items="prioridades"
-            />
-          </v-col>
           <v-col cols="12">
             <v-textarea v-model="form.descricao" label="Descrição" rows="3" />
           </v-col>
@@ -141,8 +134,6 @@ const formRef = ref(null)
 const valid = ref(false)
 const loading = ref(false)
 
-const prioridades = ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']
-
 const form = reactive({
   clienteId: props.processo?.clienteId ?? null,
   numeroProcesso: props.processo?.numeroProcesso ?? '',
@@ -152,7 +143,6 @@ const form = reactive({
   comarca: props.processo?.comarca ?? '',
   reu: props.processo?.reu ?? '',
   descricao: props.processo?.descricao ?? '',
-  prioridade: props.processo?.prioridade ?? 'MEDIA',
   groupId: props.groupId,
   columnId: props.initialColumnId
 })

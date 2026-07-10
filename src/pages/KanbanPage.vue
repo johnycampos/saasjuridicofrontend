@@ -27,12 +27,6 @@
             <div class="meta-label">Valor total</div>
             <div class="meta-num meta-num--mono">{{ formatValor(valorTotal) }}</div>
           </div>
-
-          <div class="meta-sep" />
-
-          <button class="btn-primary" @click="openProcessoForm(null)">
-            <app-icon name="plus" :size="14" /> Novo processo
-          </button>
         </div>
       </div>
 
@@ -185,11 +179,11 @@ const allProcessos = computed(() => kanbanStore.columns.flatMap(c => c.processos
 const totalProcessos = computed(() => allProcessos.value.length)
 
 const atrasados = computed(() => allProcessos.value.filter(p => {
-  if (!p.prazoProximo) return false
-  return Math.ceil((new Date(p.prazoProximo) - new Date()) / 86400000) < 0
+  if (!p.proximaTarefaPrazo) return false
+  return Math.ceil((new Date(p.proximaTarefaPrazo) - new Date()) / 86400000) < 0
 }).length)
 
-const urgentes = computed(() => allProcessos.value.filter(p => p.prioridade === 'URGENTE').length)
+const urgentes = computed(() => allProcessos.value.filter(p => p.prioridadeMaisUrgente === 'URGENTE').length)
 
 const valorTotal = computed(() =>
   allProcessos.value.reduce((s, p) => s + (Number(p.valorCausa) || 0), 0)

@@ -91,6 +91,33 @@
             variant="outlined"
             class="mt-2"
           />
+
+          <p v-if="newRole === 'ADMIN'" class="text-caption text-medium-emphasis mt-2">
+            Administradores veem todos os processos do escritório automaticamente.
+          </p>
+
+          <template v-else>
+            <v-radio-group v-model="newVisibility" class="mt-2" density="compact">
+              <v-radio label="Vê todos os processos" value="TODOS" />
+              <v-radio label="Acesso a uma área específica" value="AREA" />
+            </v-radio-group>
+            <p v-if="newVisibility === 'TODOS'" class="text-caption text-medium-emphasis mb-2">
+              Isso vai definir o papel do membro como Admin — só administradores
+              podem ver todos os processos.
+            </p>
+
+            <v-select
+              v-if="newVisibility === 'AREA'"
+              v-model="newGroupId"
+              label="Área *"
+              :items="groupsStore.groups"
+              item-title="nome"
+              item-value="id"
+              variant="outlined"
+              :error-messages="groupError"
+              @update:model-value="groupError = ''"
+            />
+          </template>
         </v-card-text>
         <v-card-actions class="pa-6 pt-0">
           <v-spacer />
@@ -126,9 +153,12 @@
 <script setup>
 import { ref, computed, onMounted, watchEffect } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useGroupsStore } from '@/stores/groups'
 import { tenantService } from '@/services/tenantService'
+import { groupService } from '@/services/groupService'
 
 const authStore = useAuthStore()
+const groupsStore = useGroupsStore()
 const members = ref([])
 const loading = ref(false)
 const myRole = ref(null)
@@ -138,7 +168,10 @@ const addLoading = ref(false)
 const addError = ref('')
 const newEmail = ref('')
 const newRole = ref('MEMBER')
+const newVisibility = ref('TODOS')
+const newGroupId = ref(null)
 const emailError = ref('')
+const groupError = ref('')
 
 const removeDialog = ref(false)
 const removeLoading = ref(false)
@@ -168,6 +201,7 @@ watchEffect(() => {
 onMounted(async () => {
   if (!authStore.currentTenantId) return
   await loadMembers()
+  if (groupsStore.groups.length === 0) await groupsStore.fetchGroups()
 })
 
 async function loadMembers() {
@@ -187,8 +221,11 @@ async function loadMembers() {
 function openAddDialog() {
   newEmail.value = ''
   newRole.value = 'MEMBER'
+  newVisibility.value = 'TODOS'
+  newGroupId.value = null
   addError.value = ''
   emailError.value = ''
+  groupError.value = ''
   addDialog.value = true
 }
 
@@ -201,10 +238,25 @@ async function submitAddMember() {
     emailError.value = 'Informe um e-mail válido'
     return
   }
+
+  // "Vê todos os processos" só é possível para ADMIN/OWNER hoje — um MEMBER
+  // sem nenhum grupo vinculado não veria processo nenhum, então promovemos
+  // o papel para ADMIN nesse caso (é exatamente o que a opção informa na tela)
+  const wantsGroupScope = newRole.value !== 'ADMIN' && newVisibility.value === 'AREA'
+  const effectiveRole = (newRole.value !== 'ADMIN' && newVisibility.value === 'TODOS') ? 'ADMIN' : newRole.value
+
+  if (wantsGroupScope && !newGroupId.value) {
+    groupError.value = 'Selecione uma área'
+    return
+  }
+
   addLoading.value = true
   addError.value = ''
   try {
-    const res = await tenantService.addMember(authStore.currentTenantId, newEmail.value, newRole.value)
+    const res = await tenantService.addMember(authStore.currentTenantId, newEmail.value, effectiveRole)
+    if (wantsGroupScope) {
+      await groupService.addMember(newGroupId.value, res.data.userId)
+    }
     members.value.push(res.data)
     closeAddDialog()
   } catch (err) {

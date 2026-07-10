@@ -24,9 +24,10 @@
       </div>
 
       <div class="card-footer">
-        <div class="prio-badge" :class="`prio--${(processo.prioridade || 'MEDIA').toLowerCase()}`">
+        <div v-if="processo.prioridadeMaisUrgente" class="prio-badge" :class="`prio--${processo.prioridadeMaisUrgente.toLowerCase()}`">
           {{ prioLabel }}
         </div>
+        <div v-else />
         <div class="card-meta">
           <span v-if="processo.valorCausa" class="meta-valor">{{ formatValor(processo.valorCausa) }}</span>
           <span v-if="processo.totalAnexos > 0" class="meta-icon-item">
@@ -55,10 +56,10 @@
 
     <!-- Timeline variant -->
     <template v-else-if="variant === 'timeline'">
-      <div class="prio-stripe" :style="{ background: prioColor }" />
+      <div v-if="processo.prioridadeMaisUrgente" class="prio-stripe" :style="{ background: prioColor }" />
       <div class="card-row1" style="margin-bottom: 8px">
         <tipo-tag v-if="processo.tipoAcao" :tipo="processo.tipoAcao" />
-        <span class="prio-label-sm" :style="{ color: prioColor }">{{ prioLabel }}</span>
+        <span v-if="processo.prioridadeMaisUrgente" class="prio-label-sm" :style="{ color: prioColor }">{{ prioLabel }}</span>
       </div>
       <div class="card-title">{{ processo.clienteNome }}</div>
 
@@ -108,12 +109,12 @@ const PRIO_CORES = {
 }
 
 const tipoColor = computed(() => TIPO_CORES[props.processo.tipoAcao] || 'var(--ink-3)')
-const prioColor = computed(() => PRIO_CORES[props.processo.prioridade] || PRIO_CORES.MEDIA)
-const prioLabel = computed(() => ({ URGENTE: 'Urgente', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }[props.processo.prioridade] || 'Média'))
+const prioColor = computed(() => PRIO_CORES[props.processo.prioridadeMaisUrgente] || PRIO_CORES.MEDIA)
+const prioLabel = computed(() => ({ URGENTE: 'Urgente', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }[props.processo.prioridadeMaisUrgente] || ''))
 
 const prazoDias = computed(() => {
-  if (!props.processo.prazoProximo) return null
-  return Math.ceil((new Date(props.processo.prazoProximo) - new Date()) / 86400000)
+  if (!props.processo.proximaTarefaPrazo) return null
+  return Math.ceil((new Date(props.processo.proximaTarefaPrazo) - new Date()) / 86400000)
 })
 
 const toneColor = computed(() => {
