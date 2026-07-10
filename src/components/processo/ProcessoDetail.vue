@@ -167,6 +167,8 @@ const emit = defineEmits(['resumo-atualizado'])
 
 const ORDEM_PRIORIDADE = ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']
 
+const tarefas = ref([])
+
 // Calculado a partir das tarefas já carregadas neste componente (não da prop
 // `processo`, que só reflete o que o backend calculou na última vez que o
 // processo foi buscado pelo componente pai) — assim o card fica sempre em dia
@@ -211,7 +213,6 @@ function prioridadeColor(p) {
 }
 
 // Tarefas
-const tarefas = ref([])
 const showTarefaForm = ref(false)
 const tarefaSaving = ref(false)
 const prioridades = ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']
