@@ -54,6 +54,11 @@
           <span class="nav-label" :class="{ visible: sidebarOpen }">Equipe</span>
         </div>
 
+        <div class="nav-item" :class="{ active: route.name === 'financeiro' }" @click="router.push('/financeiro')">
+          <app-icon name="trending" :size="16" :stroke-width="route.name === 'financeiro' ? 2 : 1.6" />
+          <span class="nav-label" :class="{ visible: sidebarOpen }">Financeiro</span>
+        </div>
+
         <div class="nav-item">
           <app-icon name="settings" :size="16" :stroke-width="1.6" />
           <span class="nav-label" :class="{ visible: sidebarOpen }">Configurações</span>
@@ -160,7 +165,7 @@ const viewTabs = [
 const groups = computed(() => groupsStore.groups)
 
 const pageTitle = computed(() => {
-  const titles = { dashboard: 'Dashboard', kanban: 'Quadro', membros: 'Equipe', 'processo-detail': 'Processo' }
+  const titles = { dashboard: 'Dashboard', kanban: 'Quadro', membros: 'Equipe', 'processo-detail': 'Processo', financeiro: 'Financeiro' }
   return titles[route.name] || 'JurisFlow'
 })
 

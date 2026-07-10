@@ -24,7 +24,8 @@ const routes = [
       { path: 'dashboard', name: 'dashboard', component: () => import('@/pages/DashboardPage.vue'), meta: { title: 'Dashboard' } },
       { path: 'board/:groupId', name: 'kanban', component: () => import('@/pages/KanbanPage.vue'), meta: { title: 'Kanban' } },
       { path: 'processos/:id', name: 'processo-detail', component: () => import('@/pages/ProcessoDetailPage.vue'), meta: { title: 'Processo' } },
-      { path: 'membros', name: 'membros', component: () => import('@/pages/MembersPage.vue'), meta: { title: 'Membros' } }
+      { path: 'membros', name: 'membros', component: () => import('@/pages/MembersPage.vue'), meta: { title: 'Membros' } },
+      { path: 'financeiro', name: 'financeiro', component: () => import('@/pages/FinanceiroPage.vue'), meta: { title: 'Financeiro' } }
     ]
   },
   {
