@@ -12,8 +12,8 @@
           <v-card flat>
             <v-card-title>Dados do Escritório</v-card-title>
             <v-card-text>
-              <v-text-field v-model="form.nome" label="Nome do Escritório *" class="mb-2" />
-              <v-text-field v-model="form.cnpj" label="CNPJ" class="mb-2" />
+              <v-text-field v-model="form.nome" label="Nome do escritório/Advogado *" class="mb-2" />
+              <v-text-field v-model="form.cnpj" label="OAB" class="mb-2" />
               <v-text-field v-model="form.telefone" label="Telefone" class="mb-2" />
               <v-textarea v-model="form.endereco" label="Endereço" rows="2" />
             </v-card-text>
@@ -23,7 +23,11 @@
         <template #item.2>
           <v-card flat>
             <v-card-title>Primeiro Grupo</v-card-title>
-            <v-card-subtitle>Grupos organizam processos por equipe ou área.</v-card-subtitle>
+            <v-card-subtitle>
+              Crie áreas de trabalho para organizar seus processos — por exemplo:
+              Pensão Alimentícia, Família, Criminal. Você poderá criar novas áreas
+              a qualquer momento depois.
+            </v-card-subtitle>
             <v-card-text>
               <v-text-field v-model="firstGroup.nome" label="Nome do Grupo *" class="mb-2" />
               <v-text-field v-model="firstGroup.descricao" label="Descrição" />
@@ -50,11 +54,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useGroupsStore } from '@/stores/groups'
 import { tenantService } from '@/services/tenantService'
-import { groupService } from '@/services/groupService'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const groupsStore = useGroupsStore()
 
 const step = ref(1)
 const loading = ref(false)
@@ -66,7 +71,7 @@ async function finish() {
   try {
     const tenantRes = await tenantService.create(form.value)
     authStore.setCurrentTenant(tenantRes.data.id)
-    await groupService.create(firstGroup.value)
+    await groupsStore.createGroup(firstGroup.value)
     router.push('/dashboard')
   } catch (error) {
     console.error('Erro no onboarding:', error)

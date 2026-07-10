@@ -23,7 +23,17 @@
           <span class="nav-label" :class="{ visible: sidebarOpen }">Dashboard</span>
         </div>
 
-        <div class="nav-section-label" :class="{ visible: sidebarOpen }">Áreas</div>
+        <div class="nav-section-row">
+          <div class="nav-section-label" :class="{ visible: sidebarOpen }">Áreas</div>
+          <button
+            class="nav-add-btn"
+            :class="{ visible: sidebarOpen }"
+            title="Nova área"
+            @click.stop="showGroupDialog = true"
+          >
+            <app-icon name="plus" :size="12" />
+          </button>
+        </div>
 
         <div
           v-for="group in groups"
@@ -114,6 +124,9 @@
 
     <!-- Tweaks panel -->
     <TweaksPanel :open="tweaksOpen" @close="tweaksOpen = false" />
+
+    <!-- New group dialog -->
+    <GroupFormDialog v-model="showGroupDialog" @created="onGroupCreated" />
   </div>
 </template>
 
@@ -124,6 +137,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useGroupsStore } from '@/stores/groups'
 import AppIcon from '@/components/AppIcon.vue'
 import TweaksPanel from '@/components/TweaksPanel.vue'
+import GroupFormDialog from '@/components/grupo/GroupFormDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -131,7 +145,12 @@ const authStore = useAuthStore()
 const groupsStore = useGroupsStore()
 const sidebarOpen = ref(false)
 const tweaksOpen = ref(false)
+const showGroupDialog = ref(false)
 const currentView = ref('kanban')
+
+function onGroupCreated(group) {
+  router.push({ name: 'kanban', params: { groupId: group.id } })
+}
 
 const viewTabs = [
   { id: 'kanban', label: 'Kanban', icon: 'columns' },
@@ -253,6 +272,30 @@ onMounted(() => {
   pointer-events: none;
 }
 .nav-section-label.visible { opacity: 1; }
+
+.nav-section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 4px;
+}
+.nav-section-row .nav-section-label { padding-right: 0; }
+
+.nav-add-btn {
+  width: 20px; height: 20px;
+  display: grid; place-items: center;
+  border-radius: 5px;
+  color: var(--ink-3);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms, background 120ms, color 120ms;
+  flex-shrink: 0;
+}
+.nav-add-btn.visible { opacity: 1; pointer-events: auto; }
+.nav-add-btn:hover { background: var(--bg-3); color: var(--ink); }
 
 .nav-item {
   display: flex;
