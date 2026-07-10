@@ -58,8 +58,18 @@ export const useKanbanStore = defineStore('kanban', () => {
     if (col) col.processos.push(processo)
   }
 
+  function updateProcesso(processo) {
+    for (const col of columns.value) {
+      const idx = col.processos?.findIndex(p => p.id === processo.id) ?? -1
+      if (idx !== -1) {
+        col.processos[idx] = processo
+        return
+      }
+    }
+  }
+
   return {
     columns, loading, currentGroupId,
-    loadBoard, createColumn, updateColumn, deleteColumn, reorderColumns, moveProcesso, addProcesso
+    loadBoard, createColumn, updateColumn, deleteColumn, reorderColumns, moveProcesso, addProcesso, updateProcesso
   }
 })

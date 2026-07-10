@@ -111,28 +111,54 @@
     <!-- Processo form dialog -->
     <v-dialog v-model="showProcessoForm" max-width="700">
       <ProcessoForm
+        :processo="editingProcesso"
         :group-id="groupId"
         :initial-column-id="selectedColumnId"
         @saved="onProcessoSaved"
-        @close="showProcessoForm = false"
+        @close="showProcessoForm = false; editingProcesso = null"
       />
+    </v-dialog>
+
+    <!-- Processo detail dialog -->
+    <v-dialog v-model="showProcessoDetail" max-width="900">
+      <v-card v-if="selectedProcesso" rounded="lg" class="pa-2">
+        <div class="d-flex align-center pa-4 pb-2">
+          <div>
+            <h2 class="text-h6 font-weight-bold">{{ selectedProcesso.clienteNome }}</h2>
+            <p v-if="selectedProcesso.numeroProcesso" class="text-body-2 text-medium-emphasis">
+              Nº {{ selectedProcesso.numeroProcesso }}
+            </p>
+          </div>
+          <v-spacer />
+          <v-chip :color="prioridadeColor(selectedProcesso.prioridade)" variant="tonal" class="mr-2">
+            {{ selectedProcesso.prioridade }}
+          </v-chip>
+          <v-btn color="primary" variant="outlined" class="mr-2" @click="editFromDetail">Editar</v-btn>
+          <v-btn icon variant="text" @click="showProcessoDetail = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
+        <v-card-text>
+          <ProcessoDetail :processo="selectedProcesso" />
+        </v-card-text>
+      </v-card>
     </v-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import draggable from 'vuedraggable'
 import { useKanbanStore } from '@/stores/kanban'
 import { useGroupsStore } from '@/stores/groups'
 import { useSettingsStore } from '@/stores/settings'
 import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
 import ProcessoForm from '@/components/processo/ProcessoForm.vue'
+import ProcessoDetail from '@/components/processo/ProcessoDetail.vue'
 import AppIcon from '@/components/AppIcon.vue'
 
 const route = useRoute()
-const router = useRouter()
 const kanbanStore = useKanbanStore()
 const groupsStore = useGroupsStore()
 const settingsStore = useSettingsStore()
@@ -143,10 +169,17 @@ const loading = computed(() => kanbanStore.loading)
 
 const showColumnDialog = ref(false)
 const showProcessoForm = ref(false)
+const showProcessoDetail = ref(false)
+const selectedProcesso = ref(null)
+const editingProcesso = ref(null)
 const selectedColumnId = ref(null)
 const editingColumn = ref(null)
 const columnForm = ref({ nome: '', cor: '#6B7280' })
 const activeFilter = ref('todos')
+
+function prioridadeColor(p) {
+  return { BAIXA: 'success', MEDIA: 'info', ALTA: 'warning', URGENTE: 'error' }[p] ?? 'default'
+}
 
 const allProcessos = computed(() => kanbanStore.columns.flatMap(c => c.processos || []))
 const totalProcessos = computed(() => allProcessos.value.length)
@@ -180,11 +213,20 @@ onMounted(() => { if (groupId.value) kanbanStore.loadBoard(groupId.value) })
 watch(groupId, id => { if (id) kanbanStore.loadBoard(id) })
 
 function openProcesso(processo) {
-  router.push({ name: 'processo-detail', params: { id: processo.id } })
+  selectedProcesso.value = processo
+  showProcessoDetail.value = true
+}
+
+function editFromDetail() {
+  editingProcesso.value = selectedProcesso.value
+  selectedColumnId.value = selectedProcesso.value?.columnId ?? null
+  showProcessoDetail.value = false
+  showProcessoForm.value = true
 }
 
 function openProcessoForm(columnId) {
   selectedColumnId.value = columnId
+  editingProcesso.value = null
   showProcessoForm.value = true
 }
 
@@ -222,7 +264,12 @@ async function onCardMoved({ processoId, fromColumnId, newIndex }) {
 }
 
 async function onProcessoSaved(processo) {
-  kanbanStore.addProcesso(processo)
+  if (editingProcesso.value) {
+    kanbanStore.updateProcesso(processo)
+  } else {
+    kanbanStore.addProcesso(processo)
+  }
+  editingProcesso.value = null
   showProcessoForm.value = false
 }
 </script>

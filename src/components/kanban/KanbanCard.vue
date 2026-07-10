@@ -15,14 +15,12 @@
         <prazo-pill :dias="prazoDias" />
       </div>
 
-      <div class="card-title">{{ processo.titulo }}</div>
+      <div class="card-title">{{ processo.clienteNome }}</div>
 
       <div v-if="processo.numeroProcesso" class="card-cnj">{{ processo.numeroProcesso }}</div>
 
-      <div v-if="processo.autor || processo.reu" class="card-partes">
-        <span class="parte-nome">{{ processo.autor }}</span>
-        <span v-if="processo.reu" class="parte-v">v.</span>
-        <span v-if="processo.reu" class="parte-nome">{{ processo.reu }}</span>
+      <div v-if="processo.reu" class="card-partes">
+        <span class="parte-nome">{{ processo.reu }}</span>
       </div>
 
       <div class="card-footer">
@@ -46,7 +44,7 @@
     <!-- Minimal variant -->
     <template v-else-if="variant === 'minimal'">
       <div class="minimal-bar" :style="{ background: tipoColor }" />
-      <div class="card-title" style="margin-bottom: 6px">{{ processo.titulo }}</div>
+      <div class="card-title" style="margin-bottom: 6px">{{ processo.clienteNome }}</div>
       <div class="card-row1" style="margin-bottom: 0">
         <prazo-pill :dias="prazoDias" compact />
         <span v-if="processo.numeroProcesso" class="card-cnj" style="margin: 0">
@@ -62,7 +60,7 @@
         <tipo-tag v-if="processo.tipoAcao" :tipo="processo.tipoAcao" />
         <span class="prio-label-sm" :style="{ color: prioColor }">{{ prioLabel }}</span>
       </div>
-      <div class="card-title">{{ processo.titulo }}</div>
+      <div class="card-title">{{ processo.clienteNome }}</div>
 
       <div v-if="prazoDias != null" class="timeline-wrap">
         <div class="timeline-track">
@@ -77,7 +75,7 @@
       </div>
 
       <div class="card-footer" style="border-top: none; padding-top: 0">
-        <span v-if="processo.autor" class="parte-nome" style="font-size: 11px; color: var(--ink-2)">{{ processo.autor }}</span>
+        <span v-if="processo.reu" class="parte-nome" style="font-size: 11px; color: var(--ink-2)">{{ processo.reu }}</span>
         <span v-if="processo.valorCausa" class="meta-valor">{{ formatValor(processo.valorCausa) }}</span>
       </div>
     </template>
