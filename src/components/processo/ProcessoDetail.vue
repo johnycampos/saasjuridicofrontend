@@ -21,6 +21,10 @@
               <p class="text-caption text-medium-emphasis">Comarca</p>
               <p class="text-body-2">{{ processo.comarca }}</p>
             </v-col>
+            <v-col v-if="processo.estado" cols="6">
+              <p class="text-caption text-medium-emphasis">Estado</p>
+              <p class="text-body-2">{{ processo.estado }}</p>
+            </v-col>
             <v-col v-if="processo.reu" cols="6">
               <p class="text-caption text-medium-emphasis">Réu</p>
               <p class="text-body-2">{{ processo.reu }}</p>

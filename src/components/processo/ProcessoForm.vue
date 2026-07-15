@@ -54,10 +54,20 @@
             </v-select>
           </v-col>
           <v-col cols="12" md="6">
+            <v-text-field v-model="form.vara" label="Vara" />
+          </v-col>
+          <v-col cols="12" md="6">
             <v-text-field v-model="form.comarca" label="Comarca" />
           </v-col>
           <v-col cols="12" md="6">
-            <v-text-field v-model="form.vara" label="Vara" />
+            <v-autocomplete
+              v-model="form.estado"
+              :items="estadoOptions"
+              item-title="label"
+              item-value="nome"
+              label="Estado"
+              clearable
+            />
           </v-col>
           <v-col cols="12" md="6">
             <v-text-field v-model="form.reu" label="Réu" />
@@ -121,6 +131,7 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { useProcessosStore } from '@/stores/processos'
 import { clienteService } from '@/services/clienteService'
 import { tribunalService } from '@/services/tribunalService'
+import { estadoService } from '@/services/estadoService'
 
 const props = defineProps({
   processo: { type: Object, default: null },
@@ -142,6 +153,7 @@ const form = reactive({
   tribunal: props.processo?.tribunal ?? '',
   vara: props.processo?.vara ?? '',
   comarca: props.processo?.comarca ?? '',
+  estado: props.processo?.estado ?? '',
   reu: props.processo?.reu ?? '',
   descricao: props.processo?.descricao ?? '',
   groupId: props.groupId,
@@ -195,9 +207,16 @@ const showTribunalDialog = ref(false)
 const tribunalSaving = ref(false)
 const newTribunal = reactive({ sigla: '', nome: '' })
 
+// Estado autocomplete
+const estadoOptions = ref([])
+
 onMounted(async () => {
-  const response = await tribunalService.list()
-  tribunalOptions.value = response.data
+  const [tribunaisResponse, estadosResponse] = await Promise.all([
+    tribunalService.list(),
+    estadoService.list()
+  ])
+  tribunalOptions.value = tribunaisResponse.data
+  estadoOptions.value = estadosResponse.data.map(e => ({ ...e, label: `${e.nome} (${e.sigla})` }))
 })
 
 async function saveNewTribunal() {

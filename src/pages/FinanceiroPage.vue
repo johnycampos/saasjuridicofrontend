@@ -104,6 +104,10 @@
                 {{ contrato ? 'Salvar' : 'Criar contrato' }}
               </v-btn>
             </v-col>
+            <v-col v-if="contrato" cols="12">
+              <p class="text-caption text-medium-emphasis mb-0">Saldo restante</p>
+              <p class="text-h6 font-weight-medium">{{ formatCurrency(contrato.saldoRestante) }}</p>
+            </v-col>
             <v-col cols="12">
               <v-textarea v-model="contratoForm.observacoes" label="Observações" rows="2" />
             </v-col>
