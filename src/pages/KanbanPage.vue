@@ -190,6 +190,7 @@ import ImportPlanilhaDialog from '@/components/kanban/ImportPlanilhaDialog.vue'
 import ProcessoForm from '@/components/processo/ProcessoForm.vue'
 import ProcessoDetail from '@/components/processo/ProcessoDetail.vue'
 import AppIcon from '@/components/AppIcon.vue'
+import { diasAteProximoPrazo, isUrgente, isAtrasado } from '@/composables/useProcessoUrgencia'
 
 const route = useRoute()
 const kanbanStore = useKanbanStore()
@@ -220,18 +221,9 @@ function prioridadeColor(p) {
 const allProcessos = computed(() => kanbanStore.columns.flatMap(c => c.processos || []))
 const totalProcessos = computed(() => allProcessos.value.length)
 
-// dias até o próximo prazo em aberto do processo; null = sem prazo, negativo = atrasado
-function diasAteProximoPrazo(p) {
-  if (!p.proximaTarefaPrazo) return null
-  return Math.ceil((new Date(p.proximaTarefaPrazo) - new Date()) / 86400000)
-}
+const atrasados = computed(() => allProcessos.value.filter(isAtrasado).length)
 
-const atrasados = computed(() => allProcessos.value.filter(p => {
-  const dias = diasAteProximoPrazo(p)
-  return dias !== null && dias < 0
-}).length)
-
-const urgentes = computed(() => allProcessos.value.filter(p => p.prioridadeMaisUrgente === 'URGENTE').length)
+const urgentes = computed(() => allProcessos.value.filter(isUrgente).length)
 
 const valorTotal = computed(() =>
   allProcessos.value.reduce((s, p) => s + (Number(p.valorCausa) || 0), 0)
@@ -259,11 +251,13 @@ function clearExtraFilters() {
 }
 
 function matchesStatusFilter(p) {
-  const dias = diasAteProximoPrazo(p)
   switch (activeFilter.value) {
-    case 'urgentes': return p.prioridadeMaisUrgente === 'URGENTE'
-    case 'atrasados': return dias !== null && dias < 0
-    case 'semana': return dias !== null && dias <= 7
+    case 'urgentes': return isUrgente(p)
+    case 'atrasados': return isAtrasado(p)
+    case 'semana': {
+      const dias = diasAteProximoPrazo(p)
+      return dias !== null && dias <= 7
+    }
     default: return true
   }
 }

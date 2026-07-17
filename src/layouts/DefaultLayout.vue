@@ -141,9 +141,31 @@
           </div>
         </div>
 
-        <div class="icon-btn notif-btn" title="Notificações">
+        <div ref="notifWrapperRef" class="icon-btn notif-btn" title="Notificações" @click="toggleNotif">
           <app-icon name="bell" :size="17" />
-          <span class="notif-dot" />
+          <span v-if="notificationsStore.hasAlerts" class="notif-dot" />
+
+          <div v-if="notifOpen" class="notif-panel" @click.stop>
+            <div class="notif-panel-header">Processos que precisam de atenção</div>
+            <div v-if="notificationsStore.loading" class="search-result-empty">Carregando…</div>
+            <template v-else-if="notificationsStore.alertProcessos.length">
+              <div
+                v-for="p in notificationsStore.alertProcessos"
+                :key="p.id"
+                class="search-result-item"
+                @click="goToProcessoFromNotif(p)"
+              >
+                <div class="d-flex align-center justify-space-between">
+                  <div class="search-result-title">{{ p.clienteNome || 'Sem cliente' }}</div>
+                  <v-chip size="x-small" :color="isAtrasado(p) ? 'error' : 'warning'" variant="tonal">
+                    {{ isAtrasado(p) ? 'Atrasado' : 'Urgente' }}
+                  </v-chip>
+                </div>
+                <div class="search-result-sub">{{ p.numeroProcesso || 'Sem número' }}</div>
+              </div>
+            </template>
+            <div v-else class="search-result-empty">Nenhum processo urgente ou atrasado</div>
+          </div>
         </div>
 
         <div class="icon-btn" title="Preferências" @click="tweaksOpen = !tweaksOpen">
@@ -166,11 +188,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGroupsStore } from '@/stores/groups'
+import { useNotificationsStore } from '@/stores/notifications'
 import { processoService } from '@/services/processoService'
+import { isAtrasado } from '@/composables/useProcessoUrgencia'
 import AppIcon from '@/components/AppIcon.vue'
 import TweaksPanel from '@/components/TweaksPanel.vue'
 import GroupFormDialog from '@/components/grupo/GroupFormDialog.vue'
@@ -179,6 +203,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const groupsStore = useGroupsStore()
+const notificationsStore = useNotificationsStore()
 const sidebarOpen = ref(false)
 const tweaksOpen = ref(false)
 const showGroupDialog = ref(false)
@@ -226,6 +251,39 @@ function onGroupCreated(group) {
   router.push({ name: 'kanban', params: { groupId: group.id } })
 }
 
+// Notificações: alerta de processos urgentes/atrasados (topbar, comum a todas as páginas)
+// Estado dos processos em alerta fica no store `notifications` — outras telas
+// (ex: criar/concluir tarefa no ProcessoDetail) chamam notificationsStore.loadAlertas()
+// para o sino refletir a mudança sem precisar de F5.
+const notifOpen = ref(false)
+const notifWrapperRef = ref(null)
+
+function onDocumentClick(e) {
+  if (notifWrapperRef.value && !notifWrapperRef.value.contains(e.target)) {
+    notifOpen.value = false
+  }
+}
+
+watch(notifOpen, (open) => {
+  if (open) {
+    document.addEventListener('click', onDocumentClick)
+  } else {
+    document.removeEventListener('click', onDocumentClick)
+  }
+})
+
+onUnmounted(() => document.removeEventListener('click', onDocumentClick))
+
+function toggleNotif() {
+  notifOpen.value = !notifOpen.value
+  if (notifOpen.value) notificationsStore.loadAlertas()
+}
+
+function goToProcessoFromNotif(processo) {
+  notifOpen.value = false
+  router.push({ name: 'processo-detail', params: { id: processo.id } })
+}
+
 const viewTabs = [
   { id: 'kanban', label: 'Kanban', icon: 'columns' },
   { id: 'list',   label: 'Lista',  icon: 'list' },
@@ -251,7 +309,10 @@ const avatarColor = computed(() => {
 
 
 onMounted(() => {
-  if (authStore.currentTenantId) groupsStore.fetchGroups()
+  if (authStore.currentTenantId) {
+    groupsStore.fetchGroups()
+    notificationsStore.loadAlertas()
+  }
 })
 </script>
 
@@ -617,6 +678,32 @@ kbd {
   border-radius: 50%;
   background: var(--red);
   border: 2px solid var(--panel);
+}
+
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 6px;
+  z-index: 60;
+  cursor: default;
+  text-align: left;
+}
+
+.notif-panel-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  padding: 8px 10px 6px;
 }
 
 .content {

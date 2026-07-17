@@ -186,12 +186,15 @@ import { isAfter, addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { tarefaService } from '@/services/tarefaService'
 import { processoLinkService } from '@/services/processoLinkService'
+import { useNotificationsStore } from '@/stores/notifications'
 
 const props = defineProps({
   processo: { type: Object, required: true }
 })
 
 const emit = defineEmits(['resumo-atualizado'])
+
+const notificationsStore = useNotificationsStore()
 
 const ORDEM_PRIORIDADE = ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']
 
@@ -254,6 +257,10 @@ const newTarefa = reactive({ titulo: '', prioridade: 'MEDIA', prazo: '' })
 async function loadTarefas() {
   const response = await tarefaService.list(props.processo.id)
   tarefas.value = response.data
+  // uma tarefa criada/concluída pode mudar a urgência ou o prazo do processo
+  // (prioridadeMaisUrgente/proximaTarefaPrazo derivam das tarefas em aberto) —
+  // atualiza o sino de notificações do topbar, que não escuta esse componente
+  notificationsStore.loadAlertas()
 }
 
 async function saveTarefa() {
