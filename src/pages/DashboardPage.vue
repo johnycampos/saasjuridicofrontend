@@ -50,6 +50,48 @@
       </div>
     </div>
 
+    <!-- Agenda da semana -->
+    <div v-if="!loading" class="mb-7">
+      <div class="section-label">Agenda da semana</div>
+      <div class="agenda-card">
+        <div class="agenda-days">
+          <button
+            v-for="dia in diasDaSemana"
+            :key="dia.iso"
+            class="agenda-day"
+            :class="{ 'agenda-day--today': dia.isHoje, 'agenda-day--active': diaSelecionado === dia.iso }"
+            @click="selecionarDia(dia.iso)"
+          >
+            <span class="agenda-day-label">{{ dia.label }}</span>
+            <span class="agenda-day-num">{{ dia.numero }}</span>
+            <span v-if="dia.total > 0" class="agenda-day-dot" />
+          </button>
+        </div>
+
+        <v-divider />
+
+        <div class="agenda-tasks">
+          <template v-if="tarefasDoDiaSelecionado.length">
+            <div
+              v-for="t in tarefasDoDiaSelecionado"
+              :key="t.id"
+              class="agenda-task-row"
+              @click="irParaProcesso(t)"
+            >
+              <span class="agenda-task-dot" :style="{ background: prioridadeCor(t.prioridade) }" />
+              <div class="agenda-task-info">
+                <div class="agenda-task-title">{{ t.titulo }}</div>
+                <div class="agenda-task-sub">
+                  {{ t.clienteNome || 'Sem cliente' }}<span v-if="t.processoNumero"> · {{ t.processoNumero }}</span>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div v-else class="birthday-empty">Nenhuma tarefa para este dia.</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Aniversariantes do mês -->
     <div v-if="!loading" class="mb-7">
       <div class="section-label">Aniversariantes do mês</div>
@@ -148,6 +190,8 @@ const totalProcessos = computed(() => groups.value.reduce((s, g) => s + (g.total
 const firstName = computed(() => authStore.user?.nome?.split(' ')[0] || '')
 
 const resumo = ref(null)
+const agendaTarefas = ref([])
+const diaSelecionado = ref(format(new Date(), 'yyyy-MM-dd'))
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -169,6 +213,46 @@ function whatsappLink(telefone) {
   return digits ? `https://wa.me/55${digits}` : null
 }
 
+// Agenda da semana: domingo a sábado, calculada a partir da data local
+// (sem parsear string ISO em Date, pra não cair no problema clássico de
+// fuso horário deslocando o dia)
+const diasDaSemana = computed(() => {
+  const hoje = new Date()
+  const hojeIso = format(hoje, 'yyyy-MM-dd')
+  const domingo = new Date(hoje)
+  domingo.setDate(hoje.getDate() - hoje.getDay())
+
+  const labels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(domingo)
+    d.setDate(domingo.getDate() + i)
+    const iso = format(d, 'yyyy-MM-dd')
+    return {
+      iso,
+      label: labels[i],
+      numero: d.getDate(),
+      isHoje: iso === hojeIso,
+      total: agendaTarefas.value.filter(t => t.prazo === iso).length
+    }
+  })
+})
+
+const tarefasDoDiaSelecionado = computed(() =>
+  agendaTarefas.value.filter(t => t.prazo === diaSelecionado.value)
+)
+
+function selecionarDia(iso) {
+  diaSelecionado.value = iso
+}
+
+function irParaProcesso(tarefa) {
+  router.push({ name: 'processo-detail', params: { id: tarefa.processoId } })
+}
+
+function prioridadeCor(p) {
+  return { BAIXA: 'var(--ink-3)', MEDIA: 'var(--navy)', ALTA: 'var(--amber)', URGENTE: 'var(--red)' }[p] ?? 'var(--ink-3)'
+}
+
 function formatValor(n) {
   const num = Number(n)
   if (!num) return '—'
@@ -182,9 +266,15 @@ async function loadResumo() {
   resumo.value = response.data
 }
 
+async function loadAgendaSemana() {
+  const response = await dashboardService.getAgendaSemana()
+  agendaTarefas.value = response.data
+}
+
 onMounted(() => {
   groupsStore.fetchGroups()
   loadResumo()
+  loadAgendaSemana()
 })
 </script>
 
@@ -261,6 +351,96 @@ onMounted(() => {
   letter-spacing: 0.1em;
   font-weight: 500;
   margin-bottom: 12px;
+}
+
+/* Agenda da semana */
+.agenda-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.agenda-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.agenda-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 4px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 120ms;
+}
+.agenda-day:last-child { border-right: none; }
+.agenda-day:hover { background: var(--bg-3); }
+.agenda-day--today .agenda-day-num { color: var(--navy); font-weight: 700; }
+.agenda-day--active { background: var(--navy-soft); }
+
+.agenda-day-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+.agenda-day-num {
+  font-family: 'Geist Mono', monospace;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-day-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--navy);
+}
+
+.agenda-tasks {
+  padding: 4px 0;
+}
+
+.agenda-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.agenda-task-row:hover { background: var(--bg-3); }
+.agenda-task-row + .agenda-task-row { border-top: 1px solid var(--line); }
+
+.agenda-task-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.agenda-task-info { min-width: 0; }
+
+.agenda-task-title {
+  font-size: var(--fs-md);
+  color: var(--ink);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agenda-task-sub {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-top: 1px;
 }
 
 /* Aniversariantes */
