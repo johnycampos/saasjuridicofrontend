@@ -8,6 +8,9 @@ export const processoService = {
   move(id, targetColumnId, newPosition) {
     return api.put(`/processos/${id}/move`, { targetColumnId, newPosition })
   },
+  moveToArea(id, groupId) {
+    return api.put(`/processos/${id}/area`, { groupId })
+  },
   delete(id) { return api.delete(`/processos/${id}`) },
   search(q, params) { return api.get('/processos', { params: { q, ...params } }) }
 }

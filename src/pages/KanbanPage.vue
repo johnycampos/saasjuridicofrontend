@@ -170,6 +170,7 @@
           <v-chip v-if="selectedProcesso.prioridadeMaisUrgente" :color="prioridadeColor(selectedProcesso.prioridadeMaisUrgente)" variant="tonal" class="mr-2">
             {{ selectedProcesso.prioridadeMaisUrgente }}
           </v-chip>
+          <v-btn variant="outlined" class="mr-2" @click="showMoveAreaDialog = true">Mudar de Área</v-btn>
           <v-btn color="primary" variant="outlined" class="mr-2" @click="editFromDetail">Editar</v-btn>
           <v-btn icon variant="text" @click="showProcessoDetail = false">
             <v-icon>mdi-close</v-icon>
@@ -179,6 +180,16 @@
           <ProcessoDetail :processo="selectedProcesso" @resumo-atualizado="onResumoAtualizado" />
         </v-card-text>
       </v-card>
+    </v-dialog>
+
+    <!-- Mudar de área -->
+    <v-dialog v-model="showMoveAreaDialog" max-width="480">
+      <MoveAreaDialog
+        v-if="selectedProcesso"
+        :processo="selectedProcesso"
+        @close="showMoveAreaDialog = false"
+        @moved="onAreaMoved"
+      />
     </v-dialog>
   </div>
 </template>
@@ -194,6 +205,7 @@ import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
 import ImportPlanilhaDialog from '@/components/kanban/ImportPlanilhaDialog.vue'
 import ProcessoForm from '@/components/processo/ProcessoForm.vue'
 import ProcessoDetail from '@/components/processo/ProcessoDetail.vue'
+import MoveAreaDialog from '@/components/processo/MoveAreaDialog.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import { diasAteProximoPrazo, isUrgente, isAtrasado } from '@/composables/useProcessoUrgencia'
 
@@ -211,6 +223,7 @@ const showColumnDialog = ref(false)
 const showProcessoForm = ref(false)
 const showProcessoDetail = ref(false)
 const showImportDialog = ref(false)
+const showMoveAreaDialog = ref(false)
 const selectedProcesso = ref(null)
 const editingProcesso = ref(null)
 const selectedColumnId = ref(null)
@@ -306,6 +319,16 @@ function onResumoAtualizado(resumo) {
   const atualizado = { ...selectedProcesso.value, ...resumo }
   selectedProcesso.value = atualizado
   kanbanStore.updateProcesso(atualizado)
+}
+
+function onAreaMoved(processo) {
+  // saiu desta área — remove do quadro atual
+  for (const col of kanbanStore.columns) {
+    col.processos = col.processos?.filter(p => p.id !== processo.id) ?? []
+  }
+  showMoveAreaDialog.value = false
+  showProcessoDetail.value = false
+  selectedProcesso.value = null
 }
 
 function editFromDetail() {

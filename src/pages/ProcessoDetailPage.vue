@@ -18,6 +18,7 @@
       <v-chip v-if="processo.prioridadeMaisUrgente" :color="prioridadeColor" variant="tonal" class="mr-2">
         {{ processo.prioridadeMaisUrgente }}
       </v-chip>
+      <v-btn variant="outlined" class="mr-2" @click="showMoveAreaDialog = true">Mudar de Área</v-btn>
       <v-btn color="primary" variant="outlined" @click="showEditForm = true">Editar</v-btn>
     </div>
 
@@ -30,6 +31,15 @@
         @close="showEditForm = false"
       />
     </v-dialog>
+
+    <v-dialog v-model="showMoveAreaDialog" max-width="480">
+      <MoveAreaDialog
+        v-if="processo"
+        :processo="processo"
+        @close="showMoveAreaDialog = false"
+        @moved="onAreaMoved"
+      />
+    </v-dialog>
   </v-container>
 </template>
 
@@ -39,6 +49,7 @@ import { useRoute } from 'vue-router'
 import { useProcessosStore } from '@/stores/processos'
 import ProcessoForm from '@/components/processo/ProcessoForm.vue'
 import ProcessoDetail from '@/components/processo/ProcessoDetail.vue'
+import MoveAreaDialog from '@/components/processo/MoveAreaDialog.vue'
 
 const route = useRoute()
 const processoStore = useProcessosStore()
@@ -46,6 +57,7 @@ const processoStore = useProcessosStore()
 const processo = computed(() => processoStore.currentProcesso)
 const loading = computed(() => processoStore.loading)
 const showEditForm = ref(false)
+const showMoveAreaDialog = ref(false)
 
 onMounted(() => processoStore.fetchById(route.params.id))
 
@@ -56,5 +68,10 @@ const prioridadeColor = computed(() => ({
 function onSaved() {
   processoStore.fetchById(route.params.id)
   showEditForm.value = false
+}
+
+function onAreaMoved() {
+  showMoveAreaDialog.value = false
+  processoStore.fetchById(route.params.id)
 }
 </script>
