@@ -97,26 +97,38 @@
           </p>
 
           <template v-else>
-            <v-radio-group v-model="newVisibility" class="mt-2" density="compact">
-              <v-radio label="Vê todos os processos" value="TODOS" />
-              <v-radio label="Acesso a uma área específica" value="AREA" />
-            </v-radio-group>
-            <p v-if="newVisibility === 'TODOS'" class="text-caption text-medium-emphasis mb-2">
-              Isso vai definir o papel do membro como Admin — só administradores
-              podem ver todos os processos.
+            <p class="text-caption text-medium-emphasis mt-2 mb-1">
+              Áreas que este membro poderá ver
+              <span v-if="selectedGroupIds.length === 0">(nenhuma selecionada = sem acesso a processos ainda)</span>
             </p>
 
-            <v-select
-              v-if="newVisibility === 'AREA'"
-              v-model="newGroupId"
-              label="Área *"
-              :items="groupsStore.groups"
-              item-title="nome"
-              item-value="id"
-              variant="outlined"
-              :error-messages="groupError"
-              @update:model-value="groupError = ''"
+            <v-checkbox
+              v-model="selectAllAreas"
+              label="Selecionar todas as áreas"
+              density="compact"
+              hide-details
+              class="mb-1"
+              @update:model-value="onToggleSelectAll"
             />
+
+            <v-divider class="mb-1" />
+
+            <div style="max-height: 220px; overflow-y: auto;">
+              <v-checkbox
+                v-for="group in groupsStore.groups"
+                :key="group.id"
+                v-model="selectedGroupIds"
+                :value="group.id"
+                :label="group.nome"
+                density="compact"
+                hide-details
+                @update:model-value="onIndividualToggle"
+              />
+            </div>
+
+            <p v-if="groupsStore.groups.length === 0" class="text-caption text-medium-emphasis mt-2">
+              Nenhuma área cadastrada ainda neste escritório.
+            </p>
           </template>
         </v-card-text>
         <v-card-actions class="pa-6 pt-0">
@@ -155,7 +167,6 @@ import { ref, computed, onMounted, watchEffect } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useGroupsStore } from '@/stores/groups'
 import { tenantService } from '@/services/tenantService'
-import { groupService } from '@/services/groupService'
 
 const authStore = useAuthStore()
 const groupsStore = useGroupsStore()
@@ -168,10 +179,18 @@ const addLoading = ref(false)
 const addError = ref('')
 const newEmail = ref('')
 const newRole = ref('MEMBER')
-const newVisibility = ref('TODOS')
-const newGroupId = ref(null)
+const selectedGroupIds = ref([])
+const selectAllAreas = ref(false)
 const emailError = ref('')
-const groupError = ref('')
+
+function onToggleSelectAll(checked) {
+  selectedGroupIds.value = checked ? groupsStore.groups.map(g => g.id) : []
+}
+
+function onIndividualToggle() {
+  selectAllAreas.value = groupsStore.groups.length > 0
+    && selectedGroupIds.value.length === groupsStore.groups.length
+}
 
 const removeDialog = ref(false)
 const removeLoading = ref(false)
@@ -221,12 +240,15 @@ async function loadMembers() {
 function openAddDialog() {
   newEmail.value = ''
   newRole.value = 'MEMBER'
-  newVisibility.value = 'TODOS'
-  newGroupId.value = null
+  selectedGroupIds.value = []
+  selectAllAreas.value = false
   addError.value = ''
   emailError.value = ''
-  groupError.value = ''
   addDialog.value = true
+  // busca incondicional pra sempre oferecer a lista de áreas atualizada
+  // (o store não expira sozinho — uma área criada agora numa outra aba
+  // não apareceria se a gente só buscasse quando a lista estava vazia)
+  groupsStore.fetchGroups()
 }
 
 function closeAddDialog() {
@@ -239,24 +261,12 @@ async function submitAddMember() {
     return
   }
 
-  // "Vê todos os processos" só é possível para ADMIN/OWNER hoje — um MEMBER
-  // sem nenhum grupo vinculado não veria processo nenhum, então promovemos
-  // o papel para ADMIN nesse caso (é exatamente o que a opção informa na tela)
-  const wantsGroupScope = newRole.value !== 'ADMIN' && newVisibility.value === 'AREA'
-  const effectiveRole = (newRole.value !== 'ADMIN' && newVisibility.value === 'TODOS') ? 'ADMIN' : newRole.value
-
-  if (wantsGroupScope && !newGroupId.value) {
-    groupError.value = 'Selecione uma área'
-    return
-  }
+  const groupIds = newRole.value === 'ADMIN' ? [] : selectedGroupIds.value
 
   addLoading.value = true
   addError.value = ''
   try {
-    const res = await tenantService.addMember(authStore.currentTenantId, newEmail.value, effectiveRole)
-    if (wantsGroupScope) {
-      await groupService.addMember(newGroupId.value, res.data.userId)
-    }
+    const res = await tenantService.addMember(authStore.currentTenantId, newEmail.value, newRole.value, groupIds)
     members.value.push(res.data)
     closeAddDialog()
   } catch (err) {

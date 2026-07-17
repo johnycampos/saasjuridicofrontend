@@ -87,6 +87,11 @@
       <v-progress-circular indeterminate color="primary" size="28" />
     </div>
 
+    <!-- Erro (ex: sem permissão para esta área) -->
+    <div v-else-if="boardError" class="board-loading">
+      <p class="text-body-2 text-medium-emphasis">{{ boardError }}</p>
+    </div>
+
     <!-- Board -->
     <div v-else class="board-area">
       <draggable
@@ -200,6 +205,7 @@ const settingsStore = useSettingsStore()
 const groupId = computed(() => route.params.groupId)
 const currentGroup = computed(() => groupsStore.groups.find(g => g.id === groupId.value))
 const loading = computed(() => kanbanStore.loading)
+const boardError = ref('')
 
 const showColumnDialog = ref(false)
 const showProcessoForm = ref(false)
@@ -276,8 +282,19 @@ function formatValor(n) {
   return `R$ ${n.toLocaleString('pt-BR')}`
 }
 
-onMounted(() => { if (groupId.value) kanbanStore.loadBoard(groupId.value) })
-watch(groupId, id => { if (id) kanbanStore.loadBoard(id) })
+async function loadBoardSafe(id) {
+  boardError.value = ''
+  try {
+    await kanbanStore.loadBoard(id)
+  } catch (err) {
+    boardError.value = err.response?.status === 403
+      ? 'Você não tem permissão para ver esta área.'
+      : 'Não foi possível carregar este quadro.'
+  }
+}
+
+onMounted(() => { if (groupId.value) loadBoardSafe(groupId.value) })
+watch(groupId, id => { if (id) loadBoardSafe(id) })
 
 function openProcesso(processo) {
   selectedProcesso.value = processo

@@ -15,9 +15,20 @@ export const useKanbanStore = defineStore('kanban', () => {
     try {
       const response = await groupService.getBoard(groupId)
       columns.value = response.data
+    } catch (err) {
+      // sem isso, uma falha (ex: 403 numa área sem permissão) deixava o
+      // board anterior na tela em vez de limpar — parecia que o usuário
+      // ainda via os dados da área bloqueada
+      columns.value = []
+      throw err
     } finally {
       loading.value = false
     }
+  }
+
+  function $reset() {
+    columns.value = []
+    currentGroupId.value = null
   }
 
   async function createColumn(data) {
@@ -70,6 +81,6 @@ export const useKanbanStore = defineStore('kanban', () => {
 
   return {
     columns, loading, currentGroupId,
-    loadBoard, createColumn, updateColumn, deleteColumn, reorderColumns, moveProcesso, addProcesso, updateProcesso
+    loadBoard, createColumn, updateColumn, deleteColumn, reorderColumns, moveProcesso, addProcesso, updateProcesso, $reset
   }
 })

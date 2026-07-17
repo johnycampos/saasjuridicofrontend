@@ -78,7 +78,7 @@
           </div>
           <div class="user-info" :class="{ visible: sidebarOpen }">
             <div class="user-name">{{ authStore.user?.nome }}</div>
-            <div class="user-sub" @click="authStore.logout(); router.push('/login')">Sair</div>
+            <div class="user-sub" @click="handleLogout">Sair</div>
           </div>
         </div>
       </div>
@@ -193,6 +193,7 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGroupsStore } from '@/stores/groups'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useKanbanStore } from '@/stores/kanban'
 import { processoService } from '@/services/processoService'
 import { isAtrasado } from '@/composables/useProcessoUrgencia'
 import AppIcon from '@/components/AppIcon.vue'
@@ -204,6 +205,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const groupsStore = useGroupsStore()
 const notificationsStore = useNotificationsStore()
+const kanbanStore = useKanbanStore()
 const sidebarOpen = ref(false)
 const tweaksOpen = ref(false)
 const showGroupDialog = ref(false)
@@ -249,6 +251,17 @@ function goToProcesso(processo) {
 
 function onGroupCreated(group) {
   router.push({ name: 'kanban', params: { groupId: group.id } })
+}
+
+function handleLogout() {
+  authStore.logout()
+  // limpa dados carregados pelo usuário anterior — sem isso, trocar de
+  // conta na mesma aba (sem recarregar a página) podia deixar a sidebar e
+  // o quadro mostrando dados/áreas de quem tinha logado antes
+  groupsStore.$reset()
+  notificationsStore.$reset()
+  kanbanStore.$reset()
+  router.push('/login')
 }
 
 // Notificações: alerta de processos urgentes/atrasados (topbar, comum a todas as páginas)

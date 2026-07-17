@@ -34,5 +34,9 @@ export const useGroupsStore = defineStore('groups', () => {
     groups.value = groups.value.filter(g => g.id !== id)
   }
 
-  return { groups, loading, fetchGroups, createGroup, updateGroup, deleteGroup }
+  function $reset() {
+    groups.value = []
+  }
+
+  return { groups, loading, fetchGroups, createGroup, updateGroup, deleteGroup, $reset }
 })

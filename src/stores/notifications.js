@@ -20,5 +20,9 @@ export const useNotificationsStore = defineStore('notifications', () => {
     }
   }
 
-  return { processos, loading, alertProcessos, hasAlerts, loadAlertas }
+  function $reset() {
+    processos.value = []
+  }
+
+  return { processos, loading, alertProcessos, hasAlerts, loadAlertas, $reset }
 })
