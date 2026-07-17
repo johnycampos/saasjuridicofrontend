@@ -45,12 +45,37 @@
 
         <div style="flex-grow: 1" />
 
-        <button class="btn-ghost">
-          <app-icon name="filter" :size="13" /> Filtros
-        </button>
-        <button class="btn-ghost">
-          <app-icon name="arrowDown" :size="13" /> Ordenar
-        </button>
+        <v-menu v-model="showFiltrosMenu" :close-on-content-click="false" location="bottom end">
+          <template #activator="{ props: menuProps }">
+            <button class="btn-ghost" :class="{ active: hasExtraFilters }" v-bind="menuProps">
+              <app-icon name="filter" :size="13" /> Filtros
+              <span v-if="hasExtraFilters" class="filter-badge" />
+            </button>
+          </template>
+          <v-card rounded="lg" border :elevation="2" min-width="260" class="pa-4">
+            <p class="text-caption text-medium-emphasis mb-2">Filtrar por</p>
+            <v-select
+              v-model="extraFilters.clienteNome"
+              :items="clienteOptions"
+              label="Cliente"
+              density="compact"
+              variant="outlined"
+              clearable
+              class="mb-2"
+            />
+            <v-select
+              v-model="extraFilters.tipoAcao"
+              :items="tipoAcaoOptions"
+              label="Tipo de Ação"
+              density="compact"
+              variant="outlined"
+              clearable
+            />
+            <v-btn v-if="hasExtraFilters" variant="text" size="small" class="mt-1" @click="clearExtraFilters">
+              Limpar filtros
+            </v-btn>
+          </v-card>
+        </v-menu>
         <button class="btn-ghost" @click="showImportDialog = true">
           <app-icon name="upload" :size="13" /> Importar de Planilhas
         </button>
@@ -76,6 +101,7 @@
           <KanbanColumn
             :column="column"
             :card-variant="settingsStore.cardStyle"
+            :matches-filter="matchesFilter"
             @add-processo="openProcessoForm(column.id)"
             @card-click="openProcesso"
             @card-moved="onCardMoved"
@@ -153,7 +179,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import draggable from 'vuedraggable'
 import { useKanbanStore } from '@/stores/kanban'
@@ -184,6 +210,8 @@ const selectedColumnId = ref(null)
 const editingColumn = ref(null)
 const columnForm = ref({ nome: '', cor: '#6B7280' })
 const activeFilter = ref('todos')
+const showFiltrosMenu = ref(false)
+const extraFilters = reactive({ clienteNome: null, tipoAcao: null })
 
 function prioridadeColor(p) {
   return { BAIXA: 'success', MEDIA: 'info', ALTA: 'warning', URGENTE: 'error' }[p] ?? 'default'
@@ -192,9 +220,15 @@ function prioridadeColor(p) {
 const allProcessos = computed(() => kanbanStore.columns.flatMap(c => c.processos || []))
 const totalProcessos = computed(() => allProcessos.value.length)
 
+// dias até o próximo prazo em aberto do processo; null = sem prazo, negativo = atrasado
+function diasAteProximoPrazo(p) {
+  if (!p.proximaTarefaPrazo) return null
+  return Math.ceil((new Date(p.proximaTarefaPrazo) - new Date()) / 86400000)
+}
+
 const atrasados = computed(() => allProcessos.value.filter(p => {
-  if (!p.proximaTarefaPrazo) return false
-  return Math.ceil((new Date(p.proximaTarefaPrazo) - new Date()) / 86400000) < 0
+  const dias = diasAteProximoPrazo(p)
+  return dias !== null && dias < 0
 }).length)
 
 const urgentes = computed(() => allProcessos.value.filter(p => p.prioridadeMaisUrgente === 'URGENTE').length)
@@ -209,6 +243,37 @@ const filters = computed(() => [
   { id: 'atrasados', label: 'Atrasados', dot: 'var(--red)', count: atrasados.value },
   { id: 'semana',   label: 'Prazo ≤ 7d', count: null },
 ])
+
+// Opções dos filtros avançados, derivadas dos processos já carregados no quadro
+const clienteOptions = computed(() =>
+  [...new Set(allProcessos.value.map(p => p.clienteNome).filter(Boolean))].sort()
+)
+const tipoAcaoOptions = computed(() =>
+  [...new Set(allProcessos.value.map(p => p.tipoAcao).filter(Boolean))].sort()
+)
+const hasExtraFilters = computed(() => !!extraFilters.clienteNome || !!extraFilters.tipoAcao)
+
+function clearExtraFilters() {
+  extraFilters.clienteNome = null
+  extraFilters.tipoAcao = null
+}
+
+function matchesStatusFilter(p) {
+  const dias = diasAteProximoPrazo(p)
+  switch (activeFilter.value) {
+    case 'urgentes': return p.prioridadeMaisUrgente === 'URGENTE'
+    case 'atrasados': return dias !== null && dias < 0
+    case 'semana': return dias !== null && dias <= 7
+    default: return true
+  }
+}
+
+function matchesFilter(p) {
+  if (!matchesStatusFilter(p)) return false
+  if (extraFilters.clienteNome && p.clienteNome !== extraFilters.clienteNome) return false
+  if (extraFilters.tipoAcao && p.tipoAcao !== extraFilters.tipoAcao) return false
+  return true
+}
 
 function formatValor(n) {
   if (!n || n === 0) return '—'
@@ -428,6 +493,14 @@ async function onProcessoSaved(processo) {
   transition: border-color 120ms;
 }
 .btn-ghost:hover { border-color: var(--line-2); }
+.btn-ghost.active { border-color: var(--navy); color: var(--navy); }
+
+.filter-badge {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--navy);
+  flex-shrink: 0;
+}
 
 .board-loading {
   display: flex;

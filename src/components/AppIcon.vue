@@ -51,5 +51,6 @@ const paths = {
   'account-plus': '<circle cx="10" cy="8" r="4"/><path d="M3 20c0-3 3.1-5.5 7-5.5s7 2.5 7 5.5"/><path d="M17 10v6m-3-3h6"/>',
   upload: '<path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/>',
   download: '<path d="M12 4v12"/><path d="m6 10 6 6 6-6"/><path d="M4 20h16"/>',
+  briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/>',
 }
 </script>

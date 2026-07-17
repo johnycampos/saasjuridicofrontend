@@ -54,6 +54,11 @@
           <span class="nav-label" :class="{ visible: sidebarOpen }">Equipe</span>
         </div>
 
+        <div class="nav-item" :class="{ active: route.name === 'clientes' }" @click="router.push('/clientes')">
+          <app-icon name="briefcase" :size="16" :stroke-width="route.name === 'clientes' ? 2 : 1.6" />
+          <span class="nav-label" :class="{ visible: sidebarOpen }">Clientes</span>
+        </div>
+
         <div class="nav-item" :class="{ active: route.name === 'financeiro' }" @click="router.push('/financeiro')">
           <app-icon name="trending" :size="16" :stroke-width="route.name === 'financeiro' ? 2 : 1.6" />
           <span class="nav-label" :class="{ visible: sidebarOpen }">Financeiro</span>
@@ -107,8 +112,33 @@
 
         <div class="topbar-search">
           <app-icon name="search" :size="14" />
-          <span>Buscar por CNJ, partes, advogado…</span>
-          <kbd>⌘K</kbd>
+          <input
+            v-model="searchQuery"
+            type="text"
+            class="topbar-search-input"
+            placeholder="Buscar por CNJ, partes, cliente…"
+            @focus="searchFocused = true"
+            @blur="onSearchBlur"
+          />
+          <kbd v-if="!searchQuery">⌘K</kbd>
+
+          <div v-if="showSearchResults" class="search-results">
+            <div v-if="searchLoading" class="search-result-empty">Buscando…</div>
+            <template v-else-if="searchResults.length">
+              <div
+                v-for="p in searchResults"
+                :key="p.id"
+                class="search-result-item"
+                @click="goToProcesso(p)"
+              >
+                <div class="search-result-title">{{ p.clienteNome || 'Sem cliente' }}</div>
+                <div class="search-result-sub">
+                  {{ p.numeroProcesso || 'Sem número' }}<span v-if="p.tipoAcao"> · {{ p.tipoAcao }}</span>
+                </div>
+              </div>
+            </template>
+            <div v-else class="search-result-empty">Nenhum processo encontrado</div>
+          </div>
         </div>
 
         <div class="icon-btn notif-btn" title="Notificações">
@@ -136,10 +166,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGroupsStore } from '@/stores/groups'
+import { processoService } from '@/services/processoService'
 import AppIcon from '@/components/AppIcon.vue'
 import TweaksPanel from '@/components/TweaksPanel.vue'
 import GroupFormDialog from '@/components/grupo/GroupFormDialog.vue'
@@ -153,6 +184,44 @@ const tweaksOpen = ref(false)
 const showGroupDialog = ref(false)
 const currentView = ref('kanban')
 
+// Busca global de processos (topbar, comum a todas as páginas)
+const searchQuery = ref('')
+const searchResults = ref([])
+const searchLoading = ref(false)
+const searchFocused = ref(false)
+let searchTimeout = null
+
+const showSearchResults = computed(() => searchFocused.value && searchQuery.value.trim().length >= 2)
+
+watch(searchQuery, (q) => {
+  clearTimeout(searchTimeout)
+  if (!q || q.trim().length < 2) {
+    searchResults.value = []
+    return
+  }
+  searchTimeout = setTimeout(async () => {
+    searchLoading.value = true
+    try {
+      const response = await processoService.search(q.trim(), { size: 8 })
+      searchResults.value = response.data.content ?? response.data
+    } finally {
+      searchLoading.value = false
+    }
+  }, 300)
+})
+
+function onSearchBlur() {
+  // delay para o click no resultado registrar antes do dropdown fechar
+  setTimeout(() => { searchFocused.value = false }, 150)
+}
+
+function goToProcesso(processo) {
+  searchQuery.value = ''
+  searchResults.value = []
+  searchFocused.value = false
+  router.push({ name: 'processo-detail', params: { id: processo.id } })
+}
+
 function onGroupCreated(group) {
   router.push({ name: 'kanban', params: { groupId: group.id } })
 }
@@ -165,7 +234,7 @@ const viewTabs = [
 const groups = computed(() => groupsStore.groups)
 
 const pageTitle = computed(() => {
-  const titles = { dashboard: 'Dashboard', kanban: 'Quadro', membros: 'Equipe', 'processo-detail': 'Processo', financeiro: 'Financeiro' }
+  const titles = { dashboard: 'Dashboard', kanban: 'Quadro', membros: 'Equipe', 'processo-detail': 'Processo', financeiro: 'Financeiro', clientes: 'Clientes' }
   return titles[route.name] || 'JurisFlow'
 })
 
@@ -450,6 +519,7 @@ onMounted(() => {
 }
 
 .topbar-search {
+  position: relative;
   display: flex; align-items: center; gap: 8px;
   background: var(--bg-3);
   padding: 7px 12px;
@@ -460,7 +530,61 @@ onMounted(() => {
   border: 1px solid transparent;
   cursor: text;
 }
-.topbar-search:hover { border-color: var(--line); }
+.topbar-search:hover,
+.topbar-search:focus-within { border-color: var(--line); }
+
+.topbar-search-input {
+  flex-grow: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+}
+.topbar-search-input::placeholder { color: var(--ink-3); }
+
+.search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  z-index: 50;
+  cursor: default;
+}
+
+.search-result-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.search-result-item:hover { background: var(--bg-3); }
+
+.search-result-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.search-result-sub {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+
+.search-result-empty {
+  padding: 12px 10px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  text-align: center;
+}
 
 kbd {
   font-family: 'Geist Mono', monospace;

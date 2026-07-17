@@ -65,6 +65,7 @@
       >
         <template #item="{ element: processo }">
           <KanbanCard
+            v-show="matchesFilter(processo)"
             :processo="processo"
             :variant="cardVariant"
             @click="$emit('card-click', processo)"
@@ -87,16 +88,18 @@ import AppIcon from '@/components/AppIcon.vue'
 
 const props = defineProps({
   column: { type: Object, required: true },
-  cardVariant: { type: String, default: 'standard' }
+  cardVariant: { type: String, default: 'standard' },
+  matchesFilter: { type: Function, default: () => true }
 })
 
 const emit = defineEmits(['card-click', 'card-moved', 'add-processo', 'edit-column', 'delete-column'])
 
-const cardCount = computed(() => props.column.processos?.length ?? 0)
+const visibleProcessos = computed(() => (props.column.processos || []).filter(props.matchesFilter))
+const cardCount = computed(() => visibleProcessos.value.length)
 const isWipOver = computed(() => props.column.wip && cardCount.value > props.column.wip)
 
 const sumValor = computed(() =>
-  props.column.processos?.reduce((s, p) => s + (Number(p.valorCausa) || 0), 0) || 0
+  visibleProcessos.value.reduce((s, p) => s + (Number(p.valorCausa) || 0), 0)
 )
 
 function formatValor(n) {

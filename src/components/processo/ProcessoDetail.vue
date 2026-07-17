@@ -43,7 +43,7 @@
     </v-col>
 
     <v-col cols="12" md="4">
-      <v-card border rounded="lg">
+      <v-card border rounded="lg" class="mb-4">
         <v-card-title>Próximo Prazo</v-card-title>
         <v-card-text>
           <div v-if="proximaTarefaPrazoLocal" class="d-flex align-center">
@@ -51,6 +51,30 @@
             <span class="text-body-2">{{ formatDate(proximaTarefaPrazoLocal) }}</span>
           </div>
           <p v-else class="text-body-2 text-medium-emphasis">Nenhuma tarefa com prazo em aberto</p>
+        </v-card-text>
+      </v-card>
+
+      <v-card border rounded="lg">
+        <v-card-title>Contato do Cliente</v-card-title>
+        <v-card-text>
+          <div v-if="processo.clienteTelefone" class="d-flex align-center justify-space-between">
+            <div>
+              <p class="text-caption text-medium-emphasis mb-0">Telefone</p>
+              <p class="text-body-2">{{ processo.clienteTelefone }}</p>
+            </div>
+            <v-btn
+              color="success"
+              variant="tonal"
+              size="small"
+              :href="whatsappLink"
+              target="_blank"
+              rel="noopener"
+              prepend-icon="mdi-whatsapp"
+            >
+              WhatsApp
+            </v-btn>
+          </div>
+          <p v-else class="text-body-2 text-medium-emphasis">Cliente sem telefone cadastrado</p>
         </v-card-text>
       </v-card>
     </v-col>
@@ -181,6 +205,11 @@ const proximaTarefaPrazoLocal = computed(() => {
   const abertas = tarefas.value.filter(t => !t.concluida && t.prazo)
   if (abertas.length === 0) return null
   return abertas.reduce((min, t) => (t.prazo < min ? t.prazo : min), abertas[0].prazo)
+})
+
+const whatsappLink = computed(() => {
+  const digits = (props.processo.clienteTelefone || '').replace(/\D/g, '')
+  return digits ? `https://wa.me/55${digits}` : null
 })
 
 const prioridadeMaisUrgenteLocal = computed(() => {
