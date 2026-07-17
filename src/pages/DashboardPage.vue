@@ -92,34 +92,8 @@
       </div>
     </div>
 
-    <!-- Aniversariantes do mês -->
-    <div v-if="!loading" class="mb-7">
-      <div class="section-label">Aniversariantes do mês</div>
-      <div class="birthdays-card">
-        <template v-if="resumo?.aniversariantesDoMes?.length">
-          <div v-for="a in resumo.aniversariantesDoMes" :key="a.clienteId" class="birthday-row">
-            <div class="birthday-info">
-              <span class="birthday-day">{{ formatDiaMes(a.dataNascimento) }}</span>
-              <span class="birthday-name">{{ a.nome }}</span>
-            </div>
-            <a
-              v-if="whatsappLink(a.telefone)"
-              :href="whatsappLink(a.telefone)"
-              target="_blank"
-              rel="noopener"
-              class="birthday-whatsapp"
-              title="Conversar no WhatsApp"
-            >
-              <v-icon size="16">mdi-whatsapp</v-icon>
-            </a>
-          </div>
-        </template>
-        <div v-else class="birthday-empty">Nenhum cliente faz aniversário este mês.</div>
-      </div>
-    </div>
-
     <!-- Groups grid -->
-    <div v-if="groups.length > 0 && !loading">
+    <div v-if="groups.length > 0 && !loading" class="mb-7">
       <div class="section-label">Áreas de prática</div>
       <div class="groups-grid">
         <div
@@ -158,6 +132,32 @@
         </div>
       </div>
     </div>
+
+    <!-- Aniversariantes do mês -->
+    <div v-if="!loading" class="mb-7">
+      <div class="section-label">Aniversariantes do mês</div>
+      <div class="birthdays-card">
+        <template v-if="resumo?.aniversariantesDoMes?.length">
+          <div v-for="a in resumo.aniversariantesDoMes" :key="a.clienteId" class="birthday-row">
+            <div class="birthday-info">
+              <span class="birthday-day">{{ formatDiaMes(a.dataNascimento) }}</span>
+              <span class="birthday-name">{{ a.nome }}</span>
+            </div>
+            <a
+              v-if="whatsappLink(a.telefone)"
+              :href="whatsappLink(a.telefone)"
+              target="_blank"
+              rel="noopener"
+              class="birthday-whatsapp"
+              title="Conversar no WhatsApp"
+            >
+              <v-icon size="16">mdi-whatsapp</v-icon>
+            </a>
+          </div>
+        </template>
+        <div v-else class="birthday-empty">Nenhum cliente faz aniversário este mês.</div>
+      </div>
+    </div>    
 
     <!-- Empty state -->
     <div v-else-if="!loading" class="empty-state">
@@ -213,9 +213,14 @@ function whatsappLink(telefone) {
   return digits ? `https://wa.me/55${digits}` : null
 }
 
-// Agenda da semana: domingo a sábado, calculada a partir da data local
-// (sem parsear string ISO em Date, pra não cair no problema clássico de
-// fuso horário deslocando o dia)
+// Datas vindas do backend (LocalDate "yyyy-MM-dd") são normalizadas com
+// new Date(...) + format() em todo o resto do app (lista de tarefas,
+// "Próximo Prazo" etc.) — usamos a mesma conversão aqui pra bater com o que
+// já é exibido nessas outras telas, em vez de comparar a string crua.
+function normalizarPrazo(prazoIso) {
+  return format(new Date(prazoIso), 'yyyy-MM-dd')
+}
+
 const diasDaSemana = computed(() => {
   const hoje = new Date()
   const hojeIso = format(hoje, 'yyyy-MM-dd')
@@ -232,13 +237,13 @@ const diasDaSemana = computed(() => {
       label: labels[i],
       numero: d.getDate(),
       isHoje: iso === hojeIso,
-      total: agendaTarefas.value.filter(t => t.prazo === iso).length
+      total: agendaTarefas.value.filter(t => normalizarPrazo(t.prazo) === iso).length
     }
   })
 })
 
 const tarefasDoDiaSelecionado = computed(() =>
-  agendaTarefas.value.filter(t => t.prazo === diaSelecionado.value)
+  agendaTarefas.value.filter(t => normalizarPrazo(t.prazo) === diaSelecionado.value)
 )
 
 function selecionarDia(iso) {
