@@ -50,6 +50,32 @@
       </div>
     </div>
 
+    <!-- Aniversariantes do mês -->
+    <div v-if="!loading" class="mb-7">
+      <div class="section-label">Aniversariantes do mês</div>
+      <div class="birthdays-card">
+        <template v-if="resumo?.aniversariantesDoMes?.length">
+          <div v-for="a in resumo.aniversariantesDoMes" :key="a.clienteId" class="birthday-row">
+            <div class="birthday-info">
+              <span class="birthday-day">{{ formatDiaMes(a.dataNascimento) }}</span>
+              <span class="birthday-name">{{ a.nome }}</span>
+            </div>
+            <a
+              v-if="whatsappLink(a.telefone)"
+              :href="whatsappLink(a.telefone)"
+              target="_blank"
+              rel="noopener"
+              class="birthday-whatsapp"
+              title="Conversar no WhatsApp"
+            >
+              <v-icon size="16">mdi-whatsapp</v-icon>
+            </a>
+          </div>
+        </template>
+        <div v-else class="birthday-empty">Nenhum cliente faz aniversário este mês.</div>
+      </div>
+    </div>
+
     <!-- Groups grid -->
     <div v-if="groups.length > 0 && !loading">
       <div class="section-label">Áreas de prática</div>
@@ -132,6 +158,15 @@ const greeting = computed(() => {
 
 function formatDate(d) {
   return format(new Date(d), 'dd/MM/yyyy', { locale: ptBR })
+}
+
+function formatDiaMes(d) {
+  return format(new Date(d), "dd 'de' MMMM", { locale: ptBR })
+}
+
+function whatsappLink(telefone) {
+  const digits = (telefone || '').replace(/\D/g, '')
+  return digits ? `https://wa.me/55${digits}` : null
 }
 
 function formatValor(n) {
@@ -226,6 +261,67 @@ onMounted(() => {
   letter-spacing: 0.1em;
   font-weight: 500;
   margin-bottom: 12px;
+}
+
+/* Aniversariantes */
+.birthdays-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.birthday-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+}
+.birthday-row + .birthday-row {
+  border-top: 1px solid var(--line);
+}
+
+.birthday-info {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.birthday-day {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.birthday-name {
+  font-size: var(--fs-md);
+  color: var(--ink);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.birthday-whatsapp {
+  display: grid;
+  place-items: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  color: var(--green);
+  flex-shrink: 0;
+  transition: background 120ms;
+}
+.birthday-whatsapp:hover { background: var(--green-bg); }
+
+.birthday-empty {
+  padding: 18px;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  text-align: center;
 }
 
 /* Groups */

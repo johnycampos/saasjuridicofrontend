@@ -63,6 +63,13 @@
               persistent-hint
             />
             <v-text-field v-model="form.email" label="E-mail" variant="outlined" class="mb-2 mt-2" />
+            <v-text-field
+              v-model="form.dataNascimento"
+              label="Data de Aniversário"
+              type="date"
+              variant="outlined"
+              class="mb-2"
+            />
             <v-textarea v-model="form.endereco" label="Endereço" variant="outlined" rows="2" class="mb-2" />
             <v-textarea v-model="form.observacoes" label="Observações" variant="outlined" rows="2" />
           </v-form>
@@ -93,7 +100,7 @@ const editing = ref(null)
 const saving = ref(false)
 const formRef = ref(null)
 const valid = ref(false)
-const form = reactive({ nome: '', cpfCnpj: '', telefone: '', email: '', endereco: '', observacoes: '' })
+const form = reactive({ nome: '', cpfCnpj: '', telefone: '', email: '', dataNascimento: '', endereco: '', observacoes: '' })
 
 async function loadClientes() {
   loading.value = true
@@ -115,6 +122,7 @@ function resetForm() {
   form.cpfCnpj = ''
   form.telefone = ''
   form.email = ''
+  form.dataNascimento = ''
   form.endereco = ''
   form.observacoes = ''
 }
@@ -131,6 +139,7 @@ function openEditDialog(cliente) {
   form.cpfCnpj = cliente.cpfCnpj ?? ''
   form.telefone = cliente.telefone ?? ''
   form.email = cliente.email ?? ''
+  form.dataNascimento = cliente.dataNascimento ?? ''
   form.endereco = cliente.endereco ?? ''
   form.observacoes = cliente.observacoes ?? ''
   dialog.value = true
@@ -142,12 +151,13 @@ async function save() {
 
   saving.value = true
   try {
+    const payload = { ...form, dataNascimento: form.dataNascimento || null }
     if (editing.value) {
-      const response = await clienteService.update(editing.value.id, { ...form })
+      const response = await clienteService.update(editing.value.id, payload)
       const idx = clientes.value.findIndex(c => c.id === editing.value.id)
       if (idx !== -1) clientes.value[idx] = response.data
     } else {
-      const response = await clienteService.create({ ...form })
+      const response = await clienteService.create(payload)
       clientes.value.unshift(response.data)
     }
     dialog.value = false
