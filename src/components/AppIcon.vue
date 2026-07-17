@@ -49,5 +49,7 @@ const paths = {
   grip: '<circle cx="9" cy="6" r="1.2"/><circle cx="15" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/><circle cx="15" cy="18" r="1.2"/>',
   'account-remove': '<circle cx="10" cy="8" r="4"/><path d="M3 20c0-3 3.1-5.5 7-5.5s7 2.5 7 5.5"/><path d="M17 13l4 4m0-4-4 4"/>',
   'account-plus': '<circle cx="10" cy="8" r="4"/><path d="M3 20c0-3 3.1-5.5 7-5.5s7 2.5 7 5.5"/><path d="M17 10v6m-3-3h6"/>',
+  upload: '<path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/>',
+  download: '<path d="M12 4v12"/><path d="m6 10 6 6 6-6"/><path d="M4 20h16"/>',
 }
 </script>

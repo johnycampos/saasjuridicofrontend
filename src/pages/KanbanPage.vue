@@ -51,6 +51,9 @@
         <button class="btn-ghost">
           <app-icon name="arrowDown" :size="13" /> Ordenar
         </button>
+        <button class="btn-ghost" @click="showImportDialog = true">
+          <app-icon name="upload" :size="13" /> Importar de Planilhas
+        </button>
       </div>
     </div>
 
@@ -113,6 +116,15 @@
       />
     </v-dialog>
 
+    <!-- Import de planilhas -->
+    <v-dialog v-model="showImportDialog" max-width="560">
+      <ImportPlanilhaDialog
+        :group-id="groupId"
+        @close="showImportDialog = false"
+        @imported="onImported"
+      />
+    </v-dialog>
+
     <!-- Processo detail dialog -->
     <v-dialog v-model="showProcessoDetail" max-width="900">
       <v-card v-if="selectedProcesso" rounded="lg" class="pa-2">
@@ -148,6 +160,7 @@ import { useKanbanStore } from '@/stores/kanban'
 import { useGroupsStore } from '@/stores/groups'
 import { useSettingsStore } from '@/stores/settings'
 import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
+import ImportPlanilhaDialog from '@/components/kanban/ImportPlanilhaDialog.vue'
 import ProcessoForm from '@/components/processo/ProcessoForm.vue'
 import ProcessoDetail from '@/components/processo/ProcessoDetail.vue'
 import AppIcon from '@/components/AppIcon.vue'
@@ -164,6 +177,7 @@ const loading = computed(() => kanbanStore.loading)
 const showColumnDialog = ref(false)
 const showProcessoForm = ref(false)
 const showProcessoDetail = ref(false)
+const showImportDialog = ref(false)
 const selectedProcesso = ref(null)
 const editingProcesso = ref(null)
 const selectedColumnId = ref(null)
@@ -262,6 +276,12 @@ async function onCardMoved({ processoId, fromColumnId, newIndex }) {
   const processo = toCol.processos.find(p => p.id === processoId)
   if (processo) processo.columnId = toCol.id
   await kanbanStore.moveProcesso(processoId, fromColumnId, toCol.id, newIndex)
+}
+
+function onImported(result) {
+  if (result?.processosCriados > 0 || result?.colunasCriadas > 0) {
+    kanbanStore.loadBoard(groupId.value)
+  }
 }
 
 async function onProcessoSaved(processo) {
