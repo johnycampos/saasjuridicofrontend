@@ -141,6 +141,46 @@
       </v-card>
     </v-col>
 
+    <!-- Movimentações do Processo -->
+    <v-col cols="12">
+      <v-card border rounded="lg">
+        <v-card-title class="d-flex align-center">
+          Movimentações
+          <v-chip v-if="movimentosNaoLidosCount > 0" size="x-small" color="success" variant="tonal" class="ml-2">
+            {{ movimentosNaoLidosCount }} não lida{{ movimentosNaoLidosCount > 1 ? 's' : '' }}
+          </v-chip>
+        </v-card-title>
+        <v-card-text>
+          <p v-if="movimentos.length === 0" class="text-body-2 text-medium-emphasis">
+            Nenhuma movimentação registrada.
+          </p>
+          <div v-else style="max-height: 400px; overflow-y: auto;">
+            <v-list density="compact">
+              <v-list-item v-for="m in movimentos" :key="m.id">
+                <template #prepend>
+                  <v-checkbox-btn
+                    :model-value="m.visualizado"
+                    title="Marcar como visualizado"
+                    @update:model-value="toggleMovimento(m)"
+                  />
+                </template>
+                <v-list-item-title :class="{ 'font-weight-bold': !m.visualizado, 'text-medium-emphasis': m.visualizado }">
+                  {{ m.nome }}
+                  <span v-if="m.codigo" class="text-caption text-medium-emphasis"> (Cód. {{ m.codigo }})</span>
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  <span>{{ formatDateTime(m.dataHora) }}</span>
+                  <span v-if="m.visualizado && m.visualizadoEm" class="text-caption text-medium-emphasis ml-2">
+                    · Lido em {{ formatDateTime(m.visualizadoEm) }}
+                  </span>
+                </v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-col>
+
     <!-- Nova tarefa -->
     <v-dialog v-model="showTarefaForm" max-width="400">
       <v-card rounded="xl" :elevation="0" border>
@@ -186,6 +226,7 @@ import { isAfter, addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { tarefaService } from '@/services/tarefaService'
 import { processoLinkService } from '@/services/processoLinkService'
+import { movimentoService } from '@/services/movimentoService'
 import { useNotificationsStore } from '@/stores/notifications'
 
 const props = defineProps({
@@ -199,6 +240,11 @@ const notificationsStore = useNotificationsStore()
 const ORDEM_PRIORIDADE = ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']
 
 const tarefas = ref([])
+const movimentos = ref([])
+
+const movimentosNaoLidosCount = computed(() =>
+  movimentos.value.filter(m => !m.visualizado).length
+)
 
 // Calculado a partir das tarefas já carregadas neste componente (não da prop
 // `processo`, que só reflete o que o backend calculou na última vez que o
@@ -224,9 +270,18 @@ const prioridadeMaisUrgenteLocal = computed(() => {
   )
 })
 
-watch([proximaTarefaPrazoLocal, prioridadeMaisUrgenteLocal], ([prazo, prioridade]) => {
-  emit('resumo-atualizado', { proximaTarefaPrazo: prazo, prioridadeMaisUrgente: prioridade })
-})
+const temMovimentacaoNaoLidaLocal = computed(() => movimentosNaoLidosCount.value > 0)
+
+watch(
+  [proximaTarefaPrazoLocal, prioridadeMaisUrgenteLocal, temMovimentacaoNaoLidaLocal],
+  ([prazo, prioridade, naoLida]) => {
+    emit('resumo-atualizado', {
+      proximaTarefaPrazo: prazo,
+      prioridadeMaisUrgente: prioridade,
+      temMovimentacaoNaoLida: naoLida
+    })
+  }
+)
 
 const prazoColor = computed(() => {
   if (!proximaTarefaPrazoLocal.value) return 'default'
@@ -238,6 +293,10 @@ const prazoColor = computed(() => {
 
 function formatDate(d) {
   return format(new Date(d), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+}
+
+function formatDateTime(d) {
+  return format(new Date(d), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
 }
 
 function formatCurrency(v) {
@@ -284,6 +343,17 @@ async function saveTarefa() {
 async function toggleTarefa(t) {
   await tarefaService.toggleConcluida(t.id, !t.concluida)
   await loadTarefas()
+}
+
+// Movimentos
+async function loadMovimentos() {
+  const response = await movimentoService.list(props.processo.id)
+  movimentos.value = response.data
+}
+
+async function toggleMovimento(m) {
+  await movimentoService.toggleVisualizado(m.id, !m.visualizado)
+  await loadMovimentos()
 }
 
 // Links

@@ -74,6 +74,14 @@
             <v-btn v-if="hasExtraFilters" variant="text" size="small" class="mt-1" @click="clearExtraFilters">
               Limpar filtros
             </v-btn>
+            <v-divider class="my-3" />
+            <v-checkbox
+              :model-value="sortByMovimentacao"
+              label="Ordenar por última movimentação"
+              density="compact"
+              hide-details
+              @update:model-value="onToggleSortMovimentacao"
+            />
           </v-card>
         </v-menu>
         <button class="btn-ghost" @click="showImportDialog = true">
@@ -232,6 +240,7 @@ const columnForm = ref({ nome: '', cor: '#6B7280' })
 const activeFilter = ref('todos')
 const showFiltrosMenu = ref(false)
 const extraFilters = reactive({ clienteNome: null, tipoAcao: null })
+const sortByMovimentacao = ref(false)
 
 function prioridadeColor(p) {
   return { BAIXA: 'success', MEDIA: 'info', ALTA: 'warning', URGENTE: 'error' }[p] ?? 'default'
@@ -244,6 +253,8 @@ const atrasados = computed(() => allProcessos.value.filter(isAtrasado).length)
 
 const urgentes = computed(() => allProcessos.value.filter(isUrgente).length)
 
+const naoLidas = computed(() => allProcessos.value.filter(p => p.temMovimentacaoNaoLida === true).length)
+
 const valorTotal = computed(() =>
   allProcessos.value.reduce((s, p) => s + (Number(p.valorCausa) || 0), 0)
 )
@@ -253,6 +264,7 @@ const filters = computed(() => [
   { id: 'urgentes', label: 'Urgentes', count: urgentes.value },
   { id: 'atrasados', label: 'Atrasados', dot: 'var(--red)', count: atrasados.value },
   { id: 'semana',   label: 'Prazo ≤ 7d', count: null },
+  { id: 'movimentacao', label: 'Movimentação não lida', dot: 'var(--green)', count: naoLidas.value },
 ])
 
 // Opções dos filtros avançados, derivadas dos processos já carregados no quadro
@@ -269,6 +281,27 @@ function clearExtraFilters() {
   extraFilters.tipoAcao = null
 }
 
+// Ordena os cards de cada coluna pela movimentação mais recente primeiro,
+// mutando o array em memória (dado já carregado, sem chamada nova ao
+// backend). O drag-and-drop intra-coluna já é bloqueado (KanbanColumn's
+// onMove só permite mover *entre* colunas — a ordem dentro da coluna é
+// sempre recalculada), então mutar a ordem aqui é seguro. Desligar recarrega
+// o board do zero pra voltar à ordem por urgência vinda do backend.
+function onToggleSortMovimentacao(value) {
+  sortByMovimentacao.value = value
+  if (value) {
+    for (const col of kanbanStore.columns) {
+      col.processos = [...(col.processos || [])].sort((a, b) => {
+        const da = a.ultimaMovimentacao ? new Date(a.ultimaMovimentacao).getTime() : -Infinity
+        const db = b.ultimaMovimentacao ? new Date(b.ultimaMovimentacao).getTime() : -Infinity
+        return db - da
+      })
+    }
+  } else if (groupId.value) {
+    kanbanStore.loadBoard(groupId.value)
+  }
+}
+
 function matchesStatusFilter(p) {
   switch (activeFilter.value) {
     case 'urgentes': return isUrgente(p)
@@ -277,6 +310,7 @@ function matchesStatusFilter(p) {
       const dias = diasAteProximoPrazo(p)
       return dias !== null && dias <= 7
     }
+    case 'movimentacao': return p.temMovimentacaoNaoLida === true
     default: return true
   }
 }
