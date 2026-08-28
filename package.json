@@ -10,20 +10,21 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@mdi/font": "^7.4.47",
     "axios": "^1.6.7",
+    "date-fns": "^3.3.1",
+    "dompurify": "^3.4.14",
     "pinia": "^2.1.7",
     "vue": "^3.4.15",
     "vue-router": "^4.2.5",
-    "vuetify": "^3.5.2",
     "vuedraggable": "^4.1.0",
-    "@mdi/font": "^7.4.47",
-    "date-fns": "^3.3.1"
+    "vuetify": "^3.5.2"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.3",
-    "vite": "^5.0.12",
-    "vitest": "^1.2.2",
     "@vue/test-utils": "^2.4.4",
-    "vite-plugin-vuetify": "^2.0.1"
+    "vite": "^5.0.12",
+    "vite-plugin-vuetify": "^2.0.1",
+    "vitest": "^1.2.2"
   }
 }

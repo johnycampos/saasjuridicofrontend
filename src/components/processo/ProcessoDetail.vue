@@ -154,9 +154,9 @@
           <p v-if="movimentos.length === 0" class="text-body-2 text-medium-emphasis">
             Nenhuma movimentação registrada.
           </p>
-          <div v-else style="max-height: 400px; overflow-y: auto;">
-            <v-list density="compact">
-              <v-list-item v-for="m in movimentos" :key="m.id">
+          <div v-else class="movimentos-scroll">
+            <v-list density="compact" class="movimentos-list">
+              <v-list-item v-for="m in movimentosComExtras" :key="m.id">
                 <template #prepend>
                   <v-checkbox-btn
                     :model-value="m.visualizado"
@@ -174,6 +174,21 @@
                     · Lido em {{ formatDateTime(m.visualizadoEm) }}
                   </span>
                 </v-list-item-subtitle>
+                <div v-if="m.extras?.texto" class="mt-1">
+                  <div
+                    class="text-body-2 movimento-texto"
+                    :class="{ 'movimento-texto--expandido': textosExpandidos.has(m.id) }"
+                    v-html="sanitizeTexto(m.extras.texto)"
+                  />
+                  <div class="d-flex align-center ga-2 mt-1">
+                    <v-btn size="x-small" variant="text" density="compact" @click="toggleTexto(m.id)">
+                      {{ textosExpandidos.has(m.id) ? 'Ocultar' : 'Ver texto completo' }}
+                    </v-btn>
+                    <a v-if="m.extras.link" :href="m.extras.link" target="_blank" rel="noopener" class="text-caption">
+                      Abrir publicação original ↗
+                    </a>
+                  </div>
+                </div>
               </v-list-item>
             </v-list>
           </div>
@@ -224,6 +239,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { isAfter, addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import DOMPurify from 'dompurify'
 import { tarefaService } from '@/services/tarefaService'
 import { processoLinkService } from '@/services/processoLinkService'
 import { movimentoService } from '@/services/movimentoService'
@@ -245,6 +261,41 @@ const movimentos = ref([])
 const movimentosNaoLidosCount = computed(() =>
   movimentos.value.filter(m => !m.visualizado).length
 )
+
+// dadosExtras chega como string JSON ('{}' pros de origem MOVIMENTO, JSON
+// completo com texto/link/advogados pros de origem PUBLICACAO) — parseado
+// uma vez por movimento aqui, não no template.
+function parseExtras(json) {
+  try {
+    return JSON.parse(json || '{}')
+  } catch {
+    return {}
+  }
+}
+
+const movimentosComExtras = computed(() =>
+  movimentos.value.map(m => ({ ...m, extras: parseExtras(m.dadosExtras) }))
+)
+
+// O texto de algumas publicações (ex: processos sigilosos) vem com marcação
+// HTML embutida na própria string (<p>, <br/>, etc. do PJe) em vez de texto
+// puro — sem sanitizar e renderizar como HTML, essas tags apareciam como
+// texto literal na tela. DOMPurify permite só tags/atributos seguros
+// (nada de <script>, onclick, etc.); texto puro (a maioria dos casos)
+// passa por ele sem alteração visual.
+function sanitizeTexto(texto) {
+  return DOMPurify.sanitize(texto)
+}
+
+// Controla quais movimentos estão com o texto da publicação expandido
+// (recolhido por padrão — a lista pode ter várias publicações com texto
+// grande, e todo mundo expandido de uma vez tornaria a lista enorme).
+const textosExpandidos = ref(new Set())
+function toggleTexto(id) {
+  if (textosExpandidos.value.has(id)) textosExpandidos.value.delete(id)
+  else textosExpandidos.value.add(id)
+  textosExpandidos.value = new Set(textosExpandidos.value)
+}
 
 // Calculado a partir das tarefas já carregadas neste componente (não da prop
 // `processo`, que só reflete o que o backend calculou na última vez que o
@@ -383,10 +434,52 @@ async function saveLink() {
 onMounted(() => {
   loadTarefas()
   loadLinks()
+  loadMovimentos()
 })
 
 watch(() => props.processo?.id, () => {
   loadTarefas()
   loadLinks()
+  loadMovimentos()
 })
 </script>
+
+<style scoped>
+.movimentos-scroll {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* v-list-item do Vuetify usa CSS Grid (grid-template-areas: "prepend
+   content append"), e o wrapper .v-list-item__content — que envolve
+   título/subtítulo/nosso texto extra — tem overflow:hidden fixo no CSS do
+   próprio Vuetify (pensado pra title/subtitle de uma linha só). Por causa
+   da regra do CSS Box Sizing ("a altura mínima automática de um item de
+   grid/flex só é baseada no conteúdo quando overflow:visible; senão vira
+   0"), a linha do grid é dimensionada menor que o conteúdo real quando o
+   texto expandido é grande — daí o scroll aparecer mas não cobrir tudo.
+   Sem isso, precisa sobrescrever os dois: o item E o content wrapper. */
+.movimentos-list :deep(.v-list-item) {
+  height: auto;
+  overflow: visible;
+}
+.movimentos-list :deep(.v-list-item__content) {
+  overflow: visible;
+}
+
+.movimento-texto {
+  white-space: pre-line;
+  max-height: 2.8em;
+  overflow: hidden;
+  color: rgba(0, 0, 0, 0.7);
+}
+.movimento-texto--expandido {
+  max-height: none;
+  /* sem isso, overflow:hidden herdado de .movimento-texto some com a altura
+     mínima automática do item dentro do v-list (flex-direction: column) —
+     o navegador passa a permitir encolher o item abaixo do conteúdo real,
+     e a área de rolagem calculada fica menor que o texto de verdade. Só
+     ficava mascarado quando havia mais de um item na lista. */
+  overflow: visible;
+}
+</style>
