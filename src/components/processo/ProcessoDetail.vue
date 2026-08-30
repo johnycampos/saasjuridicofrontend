@@ -129,7 +129,12 @@
             Nenhum link salvo.
           </p>
           <v-list v-else density="compact">
-            <v-list-item v-for="l in links" :key="l.id" :href="l.url" target="_blank">
+            <v-list-item
+              v-for="l in links" :key="l.id"
+              :href="isSafeUrl(l.url) ? l.url : undefined"
+              :target="isSafeUrl(l.url) ? '_blank' : undefined"
+              rel="noopener noreferrer"
+            >
               <template #prepend>
                 <v-icon size="18">mdi-link-variant</v-icon>
               </template>
@@ -184,7 +189,10 @@
                     <v-btn size="x-small" variant="text" density="compact" @click="toggleTexto(m.id)">
                       {{ textosExpandidos.has(m.id) ? 'Ocultar' : 'Ver texto completo' }}
                     </v-btn>
-                    <a v-if="m.extras.link" :href="m.extras.link" target="_blank" rel="noopener" class="text-caption">
+                    <a
+                      v-if="m.extras.link && isSafeUrl(m.extras.link)"
+                      :href="m.extras.link" target="_blank" rel="noopener noreferrer" class="text-caption"
+                    >
                       Abrir publicação original ↗
                     </a>
                   </div>
@@ -221,12 +229,22 @@
         <v-card-title class="pa-5 pb-2">Novo Link</v-card-title>
         <v-card-text class="pa-5 pt-2">
           <v-text-field v-model="newLink.nomeArquivo" label="Nome do arquivo *" class="mb-2" autofocus />
-          <v-text-field v-model="newLink.url" label="Link *" placeholder="https://drive.google.com/..." />
+          <v-text-field
+            v-model="newLink.url"
+            label="Link *"
+            placeholder="https://drive.google.com/..."
+            :error-messages="linkUrlError ? [linkUrlError] : []"
+          />
         </v-card-text>
         <v-card-actions class="pa-5 pt-0">
           <v-spacer />
           <v-btn variant="text" @click="showLinkForm = false">Cancelar</v-btn>
-          <v-btn color="primary" :loading="linkSaving" :disabled="!newLink.nomeArquivo || !newLink.url" @click="saveLink">
+          <v-btn
+            color="primary"
+            :loading="linkSaving"
+            :disabled="!newLink.nomeArquivo || !newLink.url || !!linkUrlError"
+            @click="saveLink"
+          >
             Salvar
           </v-btn>
         </v-card-actions>
@@ -244,6 +262,7 @@ import { tarefaService } from '@/services/tarefaService'
 import { processoLinkService } from '@/services/processoLinkService'
 import { movimentoService } from '@/services/movimentoService'
 import { useNotificationsStore } from '@/stores/notifications'
+import { isSafeUrl } from '@/utils/url'
 
 const props = defineProps({
   processo: { type: Object, required: true }
@@ -413,12 +432,18 @@ const showLinkForm = ref(false)
 const linkSaving = ref(false)
 const newLink = reactive({ nomeArquivo: '', url: '' })
 
+const linkUrlError = computed(() => {
+  if (!newLink.url) return null
+  return isSafeUrl(newLink.url) ? null : 'Link inválido — use um endereço http:// ou https://'
+})
+
 async function loadLinks() {
   const response = await processoLinkService.list(props.processo.id)
   links.value = response.data
 }
 
 async function saveLink() {
+  if (linkUrlError.value) return
   linkSaving.value = true
   try {
     await processoLinkService.create(props.processo.id, { ...newLink })
