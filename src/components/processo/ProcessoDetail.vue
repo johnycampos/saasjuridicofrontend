@@ -98,12 +98,13 @@
               WhatsApp
             </v-btn>
           </div>
-          <div v-else-if="processo.clienteId" class="d-flex align-center justify-space-between">
-            <p class="text-body-2 text-medium-emphasis mb-0">Cliente sem telefone cadastrado</p>
+          <div v-else-if="processo.clienteId">
+            <p class="text-body-2 text-medium-emphasis mb-2">Cliente sem telefone cadastrado</p>
             <v-btn
               color="primary"
               variant="tonal"
               size="small"
+              block
               prepend-icon="mdi-phone-plus"
               @click="abrirDialogTelefone"
             >
