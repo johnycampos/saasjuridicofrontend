@@ -44,6 +44,30 @@
 
     <v-col cols="12" md="4">
       <v-card border rounded="lg" class="mb-4">
+        <v-card-title>Sincronização</v-card-title>
+        <v-card-text>
+          <p class="text-body-2 text-medium-emphasis mb-3">
+            Atualize as movimentações e publicações deste processo via DATAJUD.
+          </p>
+          <v-btn
+            color="primary"
+            variant="elevated"
+            size="small"
+            block
+            :loading="datajudLoading"
+            :disabled="datajudLoading"
+            prepend-icon="mdi-cloud-sync"
+            @click="atualizarDataJud"
+          >
+            Atualizar via DATAJUD
+          </v-btn>
+          <p v-if="datajudLastSync" class="text-caption text-medium-emphasis mt-2">
+            Última atualização: {{ datajudLastSync }}
+          </p>
+        </v-card-text>
+      </v-card>
+
+      <v-card border rounded="lg" class="mb-4">
         <v-card-title>Próximo Prazo</v-card-title>
         <v-card-text>
           <div v-if="proximaTarefaPrazoLocal" class="d-flex align-center">
@@ -72,6 +96,18 @@
               prepend-icon="mdi-whatsapp"
             >
               WhatsApp
+            </v-btn>
+          </div>
+          <div v-else-if="processo.clienteId" class="d-flex align-center justify-space-between">
+            <p class="text-body-2 text-medium-emphasis mb-0">Cliente sem telefone cadastrado</p>
+            <v-btn
+              color="primary"
+              variant="tonal"
+              size="small"
+              prepend-icon="mdi-phone-plus"
+              @click="abrirDialogTelefone"
+            >
+              Cadastrar Telefone
             </v-btn>
           </div>
           <p v-else class="text-body-2 text-medium-emphasis">Cliente sem telefone cadastrado</p>
@@ -108,6 +144,7 @@
                   {{ t.prioridade }}
                 </v-chip>
                 <span v-if="t.prazo">{{ formatDate(t.prazo) }}</span>
+                <span v-if="t.horaPrazo" class="ml-1">às {{ t.horaPrazo.slice(0, 5) }}</span>
               </v-list-item-subtitle>
             </v-list-item>
           </v-list>
@@ -211,7 +248,8 @@
         <v-card-text class="pa-5 pt-2">
           <v-text-field v-model="newTarefa.titulo" label="Título *" class="mb-2" autofocus />
           <v-select v-model="newTarefa.prioridade" :items="prioridades" label="Prioridade" class="mb-2" />
-          <v-text-field v-model="newTarefa.prazo" label="Prazo" type="date" />
+          <v-text-field v-model="newTarefa.prazo" label="Prazo" type="date" class="mb-2" />
+          <v-text-field v-model="newTarefa.horaPrazo" label="Hora do prazo" type="time" hint="Opcional — deixe vazio para dia inteiro" persistent-hint />
         </v-card-text>
         <v-card-actions class="pa-5 pt-0">
           <v-spacer />
@@ -250,6 +288,45 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Cadastrar telefone do cliente -->
+    <v-dialog v-model="telefoneDialog" max-width="400">
+      <v-card rounded="xl" :elevation="0" border>
+        <v-card-title class="pa-5 pb-2">Cadastrar Telefone</v-card-title>
+        <v-card-text class="pa-5 pt-2">
+          <v-alert v-if="telefoneError" type="error" variant="tonal" density="compact" class="mb-3">
+            {{ telefoneError }}
+          </v-alert>
+          <v-progress-linear v-if="carregandoCliente" indeterminate color="primary" class="mb-3" />
+          <v-text-field
+            v-model="telefoneForm"
+            label="Telefone *"
+            hint="DDD + número, ex: 21965702348"
+            persistent-hint
+            autofocus
+            :disabled="carregandoCliente || salvandoTelefone"
+            @update:model-value="telefoneError = null"
+            @keyup.enter="salvarTelefone"
+          />
+        </v-card-text>
+        <v-card-actions class="pa-5 pt-0">
+          <v-spacer />
+          <v-btn variant="text" :disabled="salvandoTelefone" @click="telefoneDialog = false">Cancelar</v-btn>
+          <v-btn
+            color="primary"
+            :loading="salvandoTelefone"
+            :disabled="carregandoCliente || !clienteCompleto || !telefoneForm"
+            @click="salvarTelefone"
+          >
+            Salvar
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-snackbar v-model="datajudSnackbar" :color="datajudSnackbarColor" :timeout="4000" location="top">
+      {{ datajudSnackbarMsg }}
+    </v-snackbar>
   </v-row>
 </template>
 
@@ -258,6 +335,8 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { isAfter, addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import DOMPurify from 'dompurify'
+import { processoService } from '@/services/processoService'
+import { clienteService } from '@/services/clienteService'
 import { tarefaService } from '@/services/tarefaService'
 import { processoLinkService } from '@/services/processoLinkService'
 import { movimentoService } from '@/services/movimentoService'
@@ -268,7 +347,7 @@ const props = defineProps({
   processo: { type: Object, required: true }
 })
 
-const emit = defineEmits(['resumo-atualizado'])
+const emit = defineEmits(['resumo-atualizado', 'refresh'])
 
 const notificationsStore = useNotificationsStore()
 
@@ -331,6 +410,62 @@ const whatsappLink = computed(() => {
   return digits ? `https://wa.me/55${digits}` : null
 })
 
+// Contato do Cliente / Telefone
+const telefoneDialog = ref(false)
+const telefoneForm = ref('')
+const clienteCompleto = ref(null)
+const salvandoTelefone = ref(false)
+const carregandoCliente = ref(false)
+const telefoneError = ref(null)
+
+async function abrirDialogTelefone() {
+  telefoneError.value = null
+  telefoneForm.value = props.processo.clienteTelefone || ''
+  clienteCompleto.value = null
+  telefoneDialog.value = true
+  if (!props.processo.clienteId) {
+    telefoneError.value = 'Processo sem cliente associado'
+    return
+  }
+  carregandoCliente.value = true
+  try {
+    const res = await clienteService.getById(props.processo.clienteId)
+    clienteCompleto.value = res.data
+    telefoneForm.value = res.data.telefone || props.processo.clienteTelefone || ''
+  } catch (e) {
+    telefoneError.value = e.response?.data?.message || 'Erro ao carregar dados do cliente'
+  } finally {
+    carregandoCliente.value = false
+  }
+}
+
+async function salvarTelefone() {
+  if (!clienteCompleto.value) {
+    telefoneError.value = 'Dados do cliente não carregados'
+    return
+  }
+  if (!telefoneForm.value?.trim()) {
+    telefoneError.value = 'Telefone é obrigatório'
+    return
+  }
+  salvandoTelefone.value = true
+  telefoneError.value = null
+  try {
+    const payload = {
+      ...clienteCompleto.value,
+      telefone: telefoneForm.value.trim()
+    }
+    await clienteService.update(props.processo.clienteId, payload)
+    props.processo.clienteTelefone = telefoneForm.value.trim()
+    emit('refresh')
+    telefoneDialog.value = false
+  } catch (e) {
+    telefoneError.value = e.response?.data?.message || 'Erro ao salvar telefone do cliente'
+  } finally {
+    salvandoTelefone.value = false
+  }
+}
+
 const prioridadeMaisUrgenteLocal = computed(() => {
   const abertas = tarefas.value.filter(t => !t.concluida && t.prioridade)
   if (abertas.length === 0) return null
@@ -381,7 +516,7 @@ function prioridadeColor(p) {
 const showTarefaForm = ref(false)
 const tarefaSaving = ref(false)
 const prioridades = ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']
-const newTarefa = reactive({ titulo: '', prioridade: 'MEDIA', prazo: '' })
+const newTarefa = reactive({ titulo: '', prioridade: 'MEDIA', prazo: '', horaPrazo: null })
 
 async function loadTarefas() {
   const response = await tarefaService.list(props.processo.id)
@@ -398,10 +533,12 @@ async function saveTarefa() {
     await tarefaService.create(props.processo.id, {
       titulo: newTarefa.titulo,
       prioridade: newTarefa.prioridade,
-      prazo: newTarefa.prazo || null
+      prazo: newTarefa.prazo || null,
+      horaPrazo: newTarefa.horaPrazo || null
     })
     newTarefa.titulo = ''
     newTarefa.prazo = ''
+    newTarefa.horaPrazo = null
     newTarefa.prioridade = 'MEDIA'
     showTarefaForm.value = false
     await loadTarefas()
@@ -453,6 +590,37 @@ async function saveLink() {
     await loadLinks()
   } finally {
     linkSaving.value = false
+  }
+}
+
+// Sincronização DATAJUD
+const datajudLoading = ref(false)
+const datajudLastSync = ref(null)
+const datajudSnackbar = ref(false)
+const datajudSnackbarMsg = ref('')
+const datajudSnackbarColor = ref('success')
+
+async function atualizarDataJud() {
+  datajudLoading.value = true
+  try {
+    const res = await processoService.atualizarDataJud(props.processo.id)
+    const data = res.data
+    const totalNovidades = data?.novidades ?? data?.novedades ?? 0
+    datajudSnackbarColor.value = 'success'
+    datajudSnackbarMsg.value = totalNovidades > 0
+      ? `Processo atualizado — ${totalNovidades} novidade(s) encontrada(s)`
+      : 'Processo atualizado — nenhuma novidade encontrada'
+    datajudSnackbar.value = true
+    datajudLastSync.value = new Date().toLocaleTimeString('pt-BR')
+    // Recarrega movimentos/publicações do processo localmente e notifica o pai
+    await loadMovimentos()
+    emit('refresh')
+  } catch (e) {
+    datajudSnackbarColor.value = 'error'
+    datajudSnackbarMsg.value = e.response?.data?.message || 'Erro ao atualizar processo. Tente novamente.'
+    datajudSnackbar.value = true
+  } finally {
+    datajudLoading.value = false
   }
 }
 

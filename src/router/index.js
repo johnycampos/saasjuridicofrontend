@@ -26,7 +26,8 @@ const routes = [
       { path: 'processos/:id', name: 'processo-detail', component: () => import('@/pages/ProcessoDetailPage.vue'), meta: { title: 'Processo' } },
       { path: 'membros', name: 'membros', component: () => import('@/pages/MembersPage.vue'), meta: { title: 'Membros' } },
       { path: 'clientes', name: 'clientes', component: () => import('@/pages/ClientesPage.vue'), meta: { title: 'Clientes' } },
-      { path: 'financeiro', name: 'financeiro', component: () => import('@/pages/FinanceiroPage.vue'), meta: { title: 'Financeiro' } }
+      { path: 'financeiro', name: 'financeiro', component: () => import('@/pages/FinanceiroPage.vue'), meta: { title: 'Financeiro' } },
+      { path: 'agenda', name: 'agenda', component: () => import('@/pages/AgendaPage.vue'), meta: { title: 'Agenda' } }
     ]
   },
   {

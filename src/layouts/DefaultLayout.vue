@@ -64,6 +64,11 @@
           <span class="nav-label" :class="{ visible: sidebarOpen }">Financeiro</span>
         </div>
 
+        <div class="nav-item" :class="{ active: route.name === 'agenda' }" @click="router.push('/agenda')">
+          <app-icon name="calendar" :size="16" :stroke-width="route.name === 'agenda' ? 2 : 1.6" />
+          <span class="nav-label" :class="{ visible: sidebarOpen }">Agenda</span>
+        </div>
+
         <div class="nav-item">
           <app-icon name="settings" :size="16" :stroke-width="1.6" />
           <span class="nav-label" :class="{ visible: sidebarOpen }">Configurações</span>
@@ -305,7 +310,7 @@ const viewTabs = [
 const groups = computed(() => groupsStore.groups)
 
 const pageTitle = computed(() => {
-  const titles = { dashboard: 'Dashboard', kanban: 'Quadro', membros: 'Equipe', 'processo-detail': 'Processo', financeiro: 'Financeiro', clientes: 'Clientes' }
+  const titles = { dashboard: 'Dashboard', kanban: 'Quadro', membros: 'Equipe', 'processo-detail': 'Processo', financeiro: 'Financeiro', clientes: 'Clientes', agenda: 'Agenda' }
   return titles[route.name] || 'JurisFlow'
 })
 

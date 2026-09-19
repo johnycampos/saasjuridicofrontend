@@ -12,5 +12,8 @@ export const processoService = {
     return api.put(`/processos/${id}/area`, { groupId })
   },
   delete(id) { return api.delete(`/processos/${id}`) },
-  search(q, params) { return api.get('/processos', { params: { q, ...params } }) }
+  search(q, params) { return api.get('/processos', { params: { q, ...params } }) },
+  atualizarDataJud(processoId) {
+    return api.post(`/processos/${processoId}/atualizar-datajud`)
+  }
 }

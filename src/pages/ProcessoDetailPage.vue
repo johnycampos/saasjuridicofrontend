@@ -22,7 +22,11 @@
       <v-btn color="primary" variant="outlined" @click="showEditForm = true">Editar</v-btn>
     </div>
 
-    <ProcessoDetail :processo="processo" @resumo-atualizado="processoStore.patchCurrentProcesso" />
+    <ProcessoDetail
+      :processo="processo"
+      @resumo-atualizado="processoStore.patchCurrentProcesso"
+      @refresh="processoStore.fetchById(route.params.id)"
+    />
 
     <v-dialog v-model="showEditForm" max-width="700">
       <ProcessoForm

@@ -52,7 +52,48 @@
 
     <!-- Agenda da semana -->
     <div v-if="!loading" class="mb-7">
-      <div class="section-label">Agenda da semana</div>
+      <div class="agenda-header">
+        <div class="section-label" style="margin-bottom: 0;">Agenda da semana</div>
+        <div class="agenda-header-actions" style="display: flex; align-items: center; gap: 8px;">
+          <div v-if="calendarStatus?.connected && currentCalendarName" class="calendar-info">
+            <v-icon size="12" class="mr-1">mdi-google-calendar</v-icon>
+            <span class="text-caption">{{ currentCalendarName }}</span>
+            <v-btn v-if="isAdminOrOwner" variant="text" size="x-small" @click="openCalendarSelection" class="ml-1" style="min-width: auto; padding: 0 4px; text-transform: none;">
+              Alterar
+            </v-btn>
+          </div>
+          <template v-if="isAdminOrOwner">
+            <button
+              v-if="!calendarStatus?.connected"
+              @click="connectCalendar"
+              class="calendar-connect-btn"
+              :disabled="calendarActionLoading"
+            >
+              <v-progress-circular v-if="calendarActionLoading" indeterminate size="14" width="2" class="mr-1" />
+              <v-icon v-else size="16" start>mdi-google</v-icon>
+              Conectar Google Calendar
+            </button>
+            <button
+              v-else
+              @click="disconnectCalendar"
+              class="calendar-disconnect-btn"
+              :title="'Conectado: ' + (calendarStatus.email || '')"
+              :disabled="calendarActionLoading"
+            >
+              <v-progress-circular v-if="calendarActionLoading" indeterminate size="14" width="2" class="mr-1" />
+              <v-icon v-else size="14" color="green">mdi-check-circle</v-icon>
+              Google Calendar conectado
+              <v-icon size="12" class="ml-1">mdi-close</v-icon>
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <div v-if="calendarError" class="calendar-error">
+        <v-icon size="14" color="red" class="mr-1">mdi-alert-circle</v-icon>
+        {{ calendarError }}
+      </div>
+
       <div class="agenda-card">
         <div class="agenda-days">
           <button
@@ -71,10 +112,32 @@
         <v-divider />
 
         <div class="agenda-tasks">
-          <template v-if="tarefasDoDiaSelecionado.length">
+          <template v-if="tarefasDoDiaSelecionado.tarefas.length || tarefasDoDiaSelecionado.eventos.length">
+            <!-- Eventos do Google Calendar -->
             <div
-              v-for="t in tarefasDoDiaSelecionado"
-              :key="t.id"
+              v-for="e in tarefasDoDiaSelecionado.eventos"
+              :key="'cal-' + e.id"
+              class="agenda-task-row"
+              @click="e.htmlLink && abrirLink(e.htmlLink)"
+            >
+              <span class="agenda-task-dot" :style="{ background: '#4285f4' }" />
+              <div class="agenda-task-info">
+                <div class="agenda-task-title">{{ e.summary }}</div>
+                <div class="agenda-task-sub">
+                  <v-icon size="12" class="mr-1">mdi-google-calendar</v-icon>
+                  <template v-if="eventTime(e)">
+                    {{ eventTime(e) }}
+                  </template>
+                  <template v-else>
+                    Dia inteiro
+                  </template>
+                </div>
+              </div>
+            </div>
+            <!-- Tarefas existentes (app) -->
+            <div
+              v-for="t in tarefasDoDiaSelecionado.tarefas"
+              :key="'task-' + t.id"
               class="agenda-task-row"
               @click="irParaProcesso(t)"
             >
@@ -87,7 +150,7 @@
               </div>
             </div>
           </template>
-          <div v-else class="birthday-empty">Nenhuma tarefa para este dia.</div>
+          <div v-else class="birthday-empty">Nenhuma tarefa ou evento para este dia.</div>
         </div>
       </div>
     </div>
@@ -168,19 +231,69 @@
     <div v-if="loading" class="loading-state">
       <v-progress-circular indeterminate color="primary" size="32" />
     </div>
+
+    <!-- Dialog de Seleção de Calendário -->
+    <v-dialog v-model="calendarSelectionDialog" max-width="500" persistent>
+      <v-card>
+        <v-card-title>Escolha o calendário</v-card-title>
+        <v-card-subtitle>Selecione qual calendário do Google sincronizar com a agenda</v-card-subtitle>
+        <v-card-text>
+          <v-checkbox v-model="useAllCalendars" label="Sincronizar todos os calendários" color="primary" class="mb-3" hide-details />
+          <v-divider v-if="!useAllCalendars" class="my-3" />
+          <div v-if="!useAllCalendars" style="max-height: 300px; overflow-y: auto;">
+            <v-radio-group v-model="selectedCalendarId" class="ma-0" hide-details>
+              <v-radio
+                v-for="cal in availableCalendars"
+                :key="cal.id"
+                :value="cal.id"
+                class="mb-1"
+              >
+                <template v-slot:label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span :style="{ width: '12px', height: '12px', borderRadius: '50%', background: cal.backgroundColor, display: 'inline-block', flexShrink: 0 }" />
+                    <span>{{ cal.summary }}</span>
+                    <v-chip v-if="cal.primary" size="x-small" color="primary" class="ml-1">Principal</v-chip>
+                  </div>
+                </template>
+              </v-radio>
+            </v-radio-group>
+          </div>
+          <div v-if="useAllCalendars" class="text-body-2 text-medium-emphasis mt-2">
+            Todos os {{ availableCalendars.length }} calendários serão sincronizados.
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="calendarSelectionDialog = false">Cancelar</v-btn>
+          <v-btn color="primary" @click="confirmCalendarSelection" :loading="calendarListLoading"
+            :disabled="!useAllCalendars && !selectedCalendarId">
+            Confirmar
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Feedback Snackbar -->
+    <v-snackbar v-model="calendarSnackbar" :timeout="4000" color="success" location="top">
+      <v-icon class="mr-2">mdi-check-circle</v-icon>
+      Google Calendar conectado com sucesso!
+    </v-snackbar>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useGroupsStore } from '@/stores/groups'
 import { useAuthStore } from '@/stores/auth'
 import { dashboardService } from '@/services/dashboardService'
+import { googleCalendarService } from '@/services/googleCalendarService'
+import { tenantService } from '@/services/tenantService'
 
 const router = useRouter()
+const route = useRoute()
 const groupsStore = useGroupsStore()
 const authStore = useAuthStore()
 
@@ -192,6 +305,33 @@ const firstName = computed(() => authStore.user?.nome?.split(' ')[0] || '')
 const resumo = ref(null)
 const agendaTarefas = ref([])
 const diaSelecionado = ref(format(new Date(), 'yyyy-MM-dd'))
+
+const calendarStatus = ref(null)
+const calendarEvents = ref([])
+const calendarLoading = ref(false)
+const calendarActionLoading = ref(false)
+const calendarError = ref(null)
+const calendarSnackbar = ref(false)
+const myRole = ref(null)
+
+const calendarSelectionDialog = ref(false)
+const availableCalendars = ref([])
+const selectedCalendarId = ref('primary')
+const useAllCalendars = ref(false)
+const calendarListLoading = ref(false)
+
+const currentCalendarName = computed(() => {
+  if (!calendarStatus.value?.connected) return null
+  if (calendarStatus.value.calendarId === 'all') return 'Todos os calendários'
+  const found = availableCalendars.value.find(c => c.id === calendarStatus.value.calendarId)
+  if (found?.summary) return found.summary
+  if (calendarStatus.value.calendarId === 'primary') return 'Principal'
+  return calendarStatus.value.calendarId || 'Principal'
+})
+
+const isAdminOrOwner = computed(() =>
+  myRole.value === 'OWNER' || myRole.value === 'ADMIN'
+)
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -213,6 +353,23 @@ function whatsappLink(telefone) {
   return digits ? `https://wa.me/55${digits}` : null
 }
 
+function abrirLink(url) {
+  if (url && url.startsWith('https://')) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+}
+
+function eventTime(e) {
+  if (!e.start) return null
+  const start = new Date(e.start)
+  if (start.getHours() === 0 && start.getMinutes() === 0) return null
+  const startStr = format(start, 'HH:mm')
+  if (!e.end) return startStr
+  const end = new Date(e.end)
+  if (end.getHours() === 0 && end.getMinutes() === 0) return startStr
+  return startStr + ' – ' + format(end, 'HH:mm')
+}
+
 // Datas vindas do backend (LocalDate "yyyy-MM-dd") são normalizadas com
 // new Date(...) + format() em todo o resto do app (lista de tarefas,
 // "Próximo Prazo" etc.) — usamos a mesma conversão aqui pra bater com o que
@@ -232,19 +389,27 @@ const diasDaSemana = computed(() => {
     const d = new Date(domingo)
     d.setDate(domingo.getDate() + i)
     const iso = format(d, 'yyyy-MM-dd')
+    const totalTarefas = agendaTarefas.value.filter(t => normalizarPrazo(t.prazo) === iso).length
+    const totalEventos = calendarEvents.value.filter(e => e.start && format(new Date(e.start), 'yyyy-MM-dd') === iso).length
     return {
       iso,
       label: labels[i],
       numero: d.getDate(),
       isHoje: iso === hojeIso,
-      total: agendaTarefas.value.filter(t => normalizarPrazo(t.prazo) === iso).length
+      total: totalTarefas + totalEventos
     }
   })
 })
 
-const tarefasDoDiaSelecionado = computed(() =>
-  agendaTarefas.value.filter(t => normalizarPrazo(t.prazo) === diaSelecionado.value)
-)
+const tarefasDoDiaSelecionado = computed(() => {
+  const tarefas = agendaTarefas.value.filter(t => normalizarPrazo(t.prazo) === diaSelecionado.value)
+  const eventos = calendarEvents.value.filter(e => {
+    if (!e.start) return false
+    const eventDate = format(new Date(e.start), 'yyyy-MM-dd')
+    return eventDate === diaSelecionado.value
+  })
+  return { tarefas, eventos }
+})
 
 function selecionarDia(iso) {
   diaSelecionado.value = iso
@@ -266,6 +431,20 @@ function formatValor(n) {
   return `R$ ${num.toLocaleString('pt-BR')}`
 }
 
+async function loadUserRole() {
+  try {
+    if (!authStore.user) await authStore.fetchMe()
+    if (authStore.currentTenantId) {
+      const res = await tenantService.getMembers(authStore.currentTenantId)
+      const list = res.data.content ?? res.data
+      const me = list.find(m => m.userId === authStore.user?.id)
+      myRole.value = me?.role ?? null
+    }
+  } catch (e) {
+    console.error('Erro ao carregar papel do usuario:', e)
+  }
+}
+
 async function loadResumo() {
   const response = await dashboardService.getResumo()
   resumo.value = response.data
@@ -276,10 +455,138 @@ async function loadAgendaSemana() {
   agendaTarefas.value = response.data
 }
 
-onMounted(() => {
+async function loadCalendarStatus() {
+  try {
+    calendarLoading.value = true
+    calendarError.value = null
+    const response = await googleCalendarService.getStatus()
+    calendarStatus.value = response.data
+  } catch (e) {
+    calendarStatus.value = null
+  } finally {
+    calendarLoading.value = false
+  }
+}
+
+async function loadCalendarEvents() {
+  if (!calendarStatus.value?.connected) return
+  try {
+    const hoje = new Date()
+    const domingo = new Date(hoje)
+    domingo.setDate(hoje.getDate() - hoje.getDay())
+    domingo.setHours(0, 0, 0, 0)
+    const sabado = new Date(domingo)
+    sabado.setDate(domingo.getDate() + 6)
+    sabado.setHours(23, 59, 59, 999)
+
+    const response = await googleCalendarService.getEvents(
+      domingo.toISOString(),
+      sabado.toISOString()
+    )
+    calendarEvents.value = response.data || []
+  } catch (e) {
+    calendarEvents.value = []
+  }
+}
+
+async function connectCalendar() {
+  calendarActionLoading.value = true
+  calendarError.value = null
+  try {
+    const response = await googleCalendarService.getConnectUrl()
+    const url = response.data?.url
+    if (url && url.startsWith('https://accounts.google.com')) {
+      window.location.href = url
+    } else {
+      calendarError.value = 'URL de autorização Google inválida retornada pelo servidor.'
+      console.error('URL de autorização Google inválida:', url)
+    }
+  } catch (e) {
+    calendarError.value = 'Não foi possível conectar ao Google Calendar. Tente novamente.'
+    console.error('Erro ao conectar Google Calendar:', e)
+  } finally {
+    calendarActionLoading.value = false
+  }
+}
+
+async function disconnectCalendar() {
+  if (!confirm('Desconectar Google Calendar? A agenda sincronizada sera removida.')) return
+  calendarActionLoading.value = true
+  calendarError.value = null
+  try {
+    await googleCalendarService.disconnect()
+    calendarStatus.value = { connected: false, email: null, status: 'DISCONNECTED', connectedAt: null }
+    calendarEvents.value = []
+  } catch (e) {
+    calendarError.value = 'Não foi possível desconectar o Google Calendar.'
+    console.error('Erro ao desconectar:', e)
+  } finally {
+    calendarActionLoading.value = false
+  }
+}
+
+async function openCalendarSelection() {
+  try {
+    calendarListLoading.value = true
+    const calResponse = await googleCalendarService.listCalendars()
+    availableCalendars.value = calResponse.data || []
+    selectedCalendarId.value = calendarStatus.value?.calendarId || 'primary'
+    useAllCalendars.value = calendarStatus.value?.calendarId === 'all'
+    calendarSelectionDialog.value = true
+  } catch (e) {
+    console.error('Erro ao listar calendários:', e)
+  } finally {
+    calendarListLoading.value = false
+  }
+}
+
+async function confirmCalendarSelection() {
+  try {
+    calendarListLoading.value = true
+    const calendarId = useAllCalendars.value ? 'all' : selectedCalendarId.value
+    await googleCalendarService.updateCalendar(calendarId)
+    if (calendarStatus.value) {
+      calendarStatus.value.calendarId = calendarId
+    }
+    calendarSelectionDialog.value = false
+    await loadCalendarEvents()
+  } catch (e) {
+    console.error('Erro ao atualizar calendário:', e)
+    calendarError.value = 'Erro ao atualizar calendário selecionado. Tente novamente.'
+  } finally {
+    calendarListLoading.value = false
+  }
+}
+
+onMounted(async () => {
   groupsStore.fetchGroups()
   loadResumo()
   loadAgendaSemana()
+  await loadUserRole()
+  await loadCalendarStatus()
+  if (calendarStatus.value?.connected) {
+    googleCalendarService.listCalendars().then(res => {
+      availableCalendars.value = res.data || []
+    }).catch(() => {})
+    await loadCalendarEvents()
+  }
+  if (route.query.calendar === 'connected') {
+    calendarSnackbar.value = true
+    await loadCalendarStatus()
+    try {
+      calendarListLoading.value = true
+      const calResponse = await googleCalendarService.listCalendars()
+      availableCalendars.value = calResponse.data || []
+      selectedCalendarId.value = calendarStatus.value?.calendarId || 'primary'
+      useAllCalendars.value = calendarStatus.value?.calendarId === 'all'
+      calendarSelectionDialog.value = true
+    } catch (e) {
+      console.error('Erro ao listar calendários:', e)
+    } finally {
+      calendarListLoading.value = false
+    }
+    await loadCalendarEvents()
+  }
 })
 </script>
 
@@ -356,6 +663,74 @@ onMounted(() => {
   letter-spacing: 0.1em;
   font-weight: 500;
   margin-bottom: 12px;
+}
+
+.agenda-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.calendar-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+
+.calendar-connect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  color: var(--navy);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.calendar-connect-btn:hover {
+  border-color: var(--navy);
+  box-shadow: var(--shadow-md);
+}
+
+.calendar-disconnect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--green-bg);
+  border-radius: var(--radius-lg);
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 120ms;
+}
+.calendar-disconnect-btn:hover {
+  border-color: var(--green);
+}
+
+.calendar-error {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 0, 0, 0.05);
+  color: var(--red);
+  font-size: var(--fs-xs);
 }
 
 /* Agenda da semana */
