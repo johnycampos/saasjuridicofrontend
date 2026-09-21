@@ -248,25 +248,27 @@
           </div>
         </div>
 
-        <!-- Busca expansível em mobile -->
+        <!-- Busca expansível em mobile: ícone -> overlay em tela cheia -->
         <template v-else>
-          <div v-if="mobileSearchOpen" class="topbar-search topbar-search--mobile-expanded">
-            <app-icon name="search" :size="14" />
-            <input
-              ref="mobileSearchInputRef"
-              v-model="searchQuery"
-              type="text"
-              class="topbar-search-input"
-              placeholder="Buscar…"
-              @focus="searchFocused = true"
-              @blur="onSearchBlur"
-            />
-            <button class="icon-btn" style="width:24px;height:24px;flex-shrink:0" aria-label="Fechar busca" @click="mobileSearchOpen = false; searchQuery = ''">
-              <app-icon name="close" :size="14" />
-            </button>
+          <Teleport to="body">
+            <div v-if="mobileSearchOpen" class="mobile-search-overlay" @click.stop>
+              <div class="mobile-search-header">
+                <app-icon name="search" :size="16" />
+                <input
+                  ref="mobileSearchInputRef"
+                  v-model="searchQuery"
+                  type="text"
+                  class="mobile-search-input"
+                  placeholder="Buscar por CNJ, partes, cliente…"
+                  @focus="searchFocused = true"
+                  @blur="onSearchBlur"
+                />
+                <button class="icon-btn" aria-label="Fechar busca" @click="mobileSearchOpen = false; searchQuery = ''">
+                  <app-icon name="close" :size="18" />
+                </button>
+              </div>
 
-            <Teleport to="body">
-              <div v-if="showSearchResults" class="search-results search-results--mobile-full">
+              <div class="mobile-search-results">
                 <div v-if="searchLoading" class="search-result-empty">Buscando…</div>
                 <template v-else-if="searchResults.length">
                   <div
@@ -281,12 +283,12 @@
                     </div>
                   </div>
                 </template>
-                <div v-else class="search-result-empty">Nenhum processo encontrado</div>
+                <div v-else-if="showSearchResults" class="search-result-empty">Nenhum processo encontrado</div>
               </div>
-            </Teleport>
-          </div>
+            </div>
+          </Teleport>
 
-          <button v-else class="icon-btn" aria-label="Buscar" @click="openMobileSearch">
+          <button class="icon-btn" aria-label="Buscar" @click="openMobileSearch">
             <app-icon name="search" :size="17" />
           </button>
         </template>
@@ -928,13 +930,45 @@ kbd {
   }
 }
 
-/* Busca expansível mobile — ocupa toda a largura disponível na topbar */
-.topbar-search--mobile-expanded {
+/* Busca em mobile: overlay em tela cheia (input + resultados), teleportado pro body */
+.mobile-search-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--panel);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+.mobile-search-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.mobile-search-input {
   flex: 1;
   min-width: 0;
-  max-width: none;
-  width: auto;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--ink);
 }
+.mobile-search-input::placeholder { color: var(--ink-3); }
+.mobile-search-results {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.mobile-search-results .search-result-item { padding: 12px 10px; }
 
 /* Painel de notificações em tela cheia no mobile */
 .notif-panel--mobile-full {
@@ -951,18 +985,4 @@ kbd {
   overflow-y: auto;
 }
 
-/* Resultados da busca em tela cheia no mobile abaixo da topbar */
-.search-results--mobile-full {
-  position: fixed;
-  top: var(--header);
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100vw;
-  height: calc(100vh - var(--header));
-  max-height: calc(100vh - var(--header));
-  border-radius: 0;
-  z-index: 9999;
-  overflow-y: auto;
-}
 </style>
