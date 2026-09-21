@@ -100,6 +100,48 @@
       <p class="text-body-2 text-medium-emphasis">{{ boardError }}</p>
     </div>
 
+    <!-- Lista view -->
+    <div v-else-if="currentView === 'list'" class="board-list-view">
+      <v-card border rounded="xl">
+        <v-list lines="two">
+          <v-list-item
+            v-for="p in flattenedProcessos"
+            :key="p.id"
+            class="cursor-pointer"
+            @click="openProcesso(p)"
+          >
+            <template #title>
+              <span class="font-weight-medium">{{ p.clienteNome || 'Sem cliente' }}</span>
+              <span v-if="p.numeroProcesso" class="text-caption text-medium-emphasis ml-2">Nº {{ p.numeroProcesso }}</span>
+            </template>
+            <template #subtitle>
+              <span v-if="p.tipoAcao">{{ p.tipoAcao }} · </span>
+              <span class="d-inline-flex align-center">
+                <span :style="{ background: p.columnCor || 'var(--navy)', width: '6px', height: '6px', borderRadius: '50%', display: 'inline-block', marginRight: '6px' }" />
+                {{ p.columnNome }}
+              </span>
+              <span v-if="p.valorCausa"> · {{ formatValor(p.valorCausa) }}</span>
+            </template>
+            <template #append>
+              <v-chip
+                v-if="p.prioridadeMaisUrgente"
+                size="small"
+                :color="prioridadeColor(p.prioridadeMaisUrgente)"
+                variant="tonal"
+              >
+                {{ p.prioridadeMaisUrgente }}
+              </v-chip>
+            </template>
+          </v-list-item>
+          <v-list-item v-if="flattenedProcessos.length === 0">
+            <v-list-item-title class="text-medium-emphasis text-center py-6">
+              Nenhum processo encontrado para os filtros selecionados.
+            </v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </div>
+
     <!-- Board -->
     <div v-else class="board-area">
       <draggable
@@ -226,6 +268,19 @@ const kanbanStore = useKanbanStore()
 const groupsStore = useGroupsStore()
 const settingsStore = useSettingsStore()
 const isMobile = useIsMobile()
+const currentView = computed(() => (route.query.view === 'list' ? 'list' : 'kanban'))
+
+const flattenedProcessos = computed(() => {
+  const result = []
+  for (const col of kanbanStore.columns || []) {
+    for (const p of col.processos || []) {
+      if (matchesFilter(p)) {
+        result.push({ ...p, columnNome: col.nome, columnCor: col.cor })
+      }
+    }
+  }
+  return result
+})
 
 const groupId = computed(() => route.params.groupId)
 const currentGroup = computed(() => groupsStore.groups.find(g => g.id === groupId.value))
@@ -586,6 +641,12 @@ async function onProcessoSaved(processo) {
   flex-grow: 1;
   overflow-x: auto;
   overflow-y: hidden;
+  padding: 16px 20px 24px;
+}
+
+.board-list-view {
+  flex-grow: 1;
+  overflow-y: auto;
   padding: 16px 20px 24px;
 }
 

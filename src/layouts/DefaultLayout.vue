@@ -1,5 +1,6 @@
 <template>
-  <div class="shell">
+  <v-app>
+    <div class="shell">
     <!-- Sidebar Rail — desktop only (v-if preserva HTML/CSS intactos, sem risco de regressão) -->
     <aside
       v-if="!isMobile"
@@ -206,7 +207,7 @@
             :key="tab.id"
             class="view-tab"
             :class="{ active: currentView === tab.id }"
-            @click="currentView = tab.id"
+            @click="setView(tab.id)"
           >
             <app-icon :name="tab.icon" :size="13" />
             {{ tab.label }}
@@ -264,23 +265,25 @@
               <app-icon name="close" :size="14" />
             </button>
 
-            <div v-if="showSearchResults" class="search-results">
-              <div v-if="searchLoading" class="search-result-empty">Buscando…</div>
-              <template v-else-if="searchResults.length">
-                <div
-                  v-for="p in searchResults"
-                  :key="p.id"
-                  class="search-result-item"
-                  @click="goToProcesso(p)"
-                >
-                  <div class="search-result-title">{{ p.clienteNome || 'Sem cliente' }}</div>
-                  <div class="search-result-sub">
-                    {{ p.numeroProcesso || 'Sem número' }}<span v-if="p.tipoAcao"> · {{ p.tipoAcao }}</span>
+            <Teleport to="body">
+              <div v-if="showSearchResults" class="search-results search-results--mobile-full">
+                <div v-if="searchLoading" class="search-result-empty">Buscando…</div>
+                <template v-else-if="searchResults.length">
+                  <div
+                    v-for="p in searchResults"
+                    :key="p.id"
+                    class="search-result-item"
+                    @click="goToProcesso(p)"
+                  >
+                    <div class="search-result-title">{{ p.clienteNome || 'Sem cliente' }}</div>
+                    <div class="search-result-sub">
+                      {{ p.numeroProcesso || 'Sem número' }}<span v-if="p.tipoAcao"> · {{ p.tipoAcao }}</span>
+                    </div>
                   </div>
-                </div>
-              </template>
-              <div v-else class="search-result-empty">Nenhum processo encontrado</div>
-            </div>
+                </template>
+                <div v-else class="search-result-empty">Nenhum processo encontrado</div>
+              </div>
+            </Teleport>
           </div>
 
           <button v-else class="icon-btn" aria-label="Buscar" @click="openMobileSearch">
@@ -292,27 +295,45 @@
           <app-icon name="bell" :size="17" />
           <span v-if="notificationsStore.hasAlerts" class="notif-dot" />
 
-          <div v-if="notifOpen" class="notif-panel" @click.stop>
-            <div class="notif-panel-header">Processos que precisam de atenção</div>
-            <div v-if="notificationsStore.loading" class="search-result-empty">Carregando…</div>
-            <template v-else-if="notificationsStore.alertProcessos.length">
-              <div
-                v-for="p in notificationsStore.alertProcessos"
-                :key="p.id"
-                class="search-result-item"
-                @click="goToProcessoFromNotif(p)"
-              >
-                <div class="d-flex align-center justify-space-between">
-                  <div class="search-result-title">{{ p.clienteNome || 'Sem cliente' }}</div>
-                  <v-chip size="x-small" :color="isAtrasado(p) ? 'error' : 'warning'" variant="tonal">
-                    {{ isAtrasado(p) ? 'Atrasado' : 'Urgente' }}
-                  </v-chip>
-                </div>
-                <div class="search-result-sub">{{ p.numeroProcesso || 'Sem número' }}</div>
+          <Teleport to="body" :disabled="!isMobile">
+            <div
+              v-if="notifOpen"
+              class="notif-panel"
+              :class="{ 'notif-panel--mobile-full': isMobile }"
+              @click.stop
+            >
+              <div class="notif-panel-header d-flex align-center justify-space-between">
+                <span>Processos que precisam de atenção</span>
+                <button
+                  v-if="isMobile"
+                  class="icon-btn"
+                  style="width: 24px; height: 24px; flex-shrink: 0;"
+                  aria-label="Fechar notificações"
+                  @click="notifOpen = false"
+                >
+                  <app-icon name="close" :size="14" />
+                </button>
               </div>
-            </template>
-            <div v-else class="search-result-empty">Nenhum processo urgente ou atrasado</div>
-          </div>
+              <div v-if="notificationsStore.loading" class="search-result-empty">Carregando…</div>
+              <template v-else-if="notificationsStore.alertProcessos.length">
+                <div
+                  v-for="p in notificationsStore.alertProcessos"
+                  :key="p.id"
+                  class="search-result-item"
+                  @click="goToProcessoFromNotif(p)"
+                >
+                  <div class="d-flex align-center justify-space-between">
+                    <div class="search-result-title">{{ p.clienteNome || 'Sem cliente' }}</div>
+                    <v-chip size="x-small" :color="isAtrasado(p) ? 'error' : 'warning'" variant="tonal">
+                      {{ isAtrasado(p) ? 'Atrasado' : 'Urgente' }}
+                    </v-chip>
+                  </div>
+                  <div class="search-result-sub">{{ p.numeroProcesso || 'Sem número' }}</div>
+                </div>
+              </template>
+              <div v-else class="search-result-empty">Nenhum processo urgente ou atrasado</div>
+            </div>
+          </Teleport>
         </div>
 
         <div class="icon-btn" title="Preferências" @click="tweaksOpen = !tweaksOpen">
@@ -332,6 +353,7 @@
     <!-- New group dialog -->
     <GroupFormDialog v-model="showGroupDialog" @created="onGroupCreated" />
   </div>
+  </v-app>
 </template>
 
 <script setup>
@@ -358,7 +380,11 @@ const isMobile = useIsMobile()
 const sidebarOpen = ref(false)
 const tweaksOpen = ref(false)
 const showGroupDialog = ref(false)
-const currentView = ref('kanban')
+const currentView = computed(() => (route.query.view === 'list' ? 'list' : 'kanban'))
+
+function setView(viewId) {
+  router.replace({ query: { ...route.query, view: viewId === 'list' ? 'list' : undefined } })
+}
 
 // Estado mobile
 const mobileDrawerOpen = ref(false)
@@ -910,14 +936,33 @@ kbd {
   width: auto;
 }
 
-/* Rede de segurança para notif-panel e search-results em telas muito estreitas */
-@media (max-width: 400px) {
-  .notif-panel,
-  .search-results {
-    right: 0;
-    left: 0;
-    width: 100%;
-    border-radius: 0 0 12px 12px;
-  }
+/* Painel de notificações em tela cheia no mobile */
+.notif-panel--mobile-full {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  border-radius: 0;
+  z-index: 9999;
+  overflow-y: auto;
+}
+
+/* Resultados da busca em tela cheia no mobile abaixo da topbar */
+.search-results--mobile-full {
+  position: fixed;
+  top: var(--header);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: calc(100vh - var(--header));
+  max-height: calc(100vh - var(--header));
+  border-radius: 0;
+  z-index: 9999;
+  overflow-y: auto;
 }
 </style>
