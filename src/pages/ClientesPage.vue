@@ -40,7 +40,7 @@
     </v-card>
 
     <!-- Dialog: Criar/Editar Cliente -->
-    <v-dialog v-model="dialog" max-width="520">
+    <v-dialog v-model="dialog" max-width="520" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl">
         <v-card-title class="pa-6 pb-2">{{ editing ? 'Editar Cliente' : 'Novo Cliente' }}</v-card-title>
         <v-card-text class="pa-6 pt-2">
@@ -88,7 +88,10 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { clienteService } from '@/services/clienteService'
+
+const isMobile = useIsMobile()
 
 const clientes = ref([])
 const loading = ref(false)

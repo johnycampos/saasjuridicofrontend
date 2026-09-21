@@ -47,7 +47,7 @@
         <p v-else-if="processos.length === 0" class="text-body-2 text-medium-emphasis">
           Este cliente não tem processos cadastrados.
         </p>
-        <v-table v-else>
+        <v-table v-else-if="!isMobile">
           <thead>
             <tr>
               <th>Nº do Processo</th>
@@ -75,11 +75,31 @@
             </tr>
           </tbody>
         </v-table>
+
+        <v-list v-else lines="two">
+          <v-list-item
+            v-for="p in processos"
+            :key="p.processoId"
+            :title="p.numeroProcesso || '—'"
+            @click="openContrato(p)"
+          >
+            <template #subtitle>
+              <span>{{ p.tipoAcao || '—' }}</span>
+              <span v-if="p.valorTotal"> · {{ formatCurrency(p.valorTotal) }}</span>
+            </template>
+            <template #append>
+              <v-chip size="small" :color="statusColor(p.status)" variant="tonal">
+                {{ statusLabel(p.status) }}
+                <template v-if="p.status !== 'SEM_CONTRATO'"> ({{ p.parcelasPagas }}/{{ p.parcelasTotal }})</template>
+              </v-chip>
+            </template>
+          </v-list-item>
+        </v-list>
       </v-card-text>
     </v-card>
 
     <!-- Dialog do contrato -->
-    <v-dialog v-model="showContratoDialog" max-width="600">
+    <v-dialog v-model="showContratoDialog" max-width="600" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl" :elevation="0" border>
         <v-card-title class="d-flex align-center pa-5 pb-2">
           Contrato — {{ selectedProcesso?.numeroProcesso || 'Processo' }}
@@ -159,7 +179,7 @@
     </v-dialog>
 
     <!-- Nova parcela -->
-    <v-dialog v-model="showParcelaForm" max-width="400">
+    <v-dialog v-model="showParcelaForm" max-width="400" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl" :elevation="0" border>
         <v-card-title class="pa-5 pb-2">Nova Parcela</v-card-title>
         <v-card-text class="pa-5 pt-2">
@@ -180,11 +200,14 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { clienteService } from '@/services/clienteService'
 import { contratoService } from '@/services/contratoService'
 import { parcelaService } from '@/services/parcelaService'
+
+const isMobile = useIsMobile()
 
 const listaClientes = ref([])
 const listaLoading = ref(false)

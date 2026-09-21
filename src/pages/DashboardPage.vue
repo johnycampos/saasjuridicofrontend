@@ -233,7 +233,7 @@
     </div>
 
     <!-- Dialog de Seleção de Calendário -->
-    <v-dialog v-model="calendarSelectionDialog" max-width="500" persistent>
+    <v-dialog v-model="calendarSelectionDialog" max-width="500" persistent :fullscreen="isMobile" :scrollable="isMobile">
       <v-card>
         <v-card-title>Escolha o calendário</v-card-title>
         <v-card-subtitle>Selecione qual calendário do Google sincronizar com a agenda</v-card-subtitle>
@@ -283,6 +283,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { useRouter, useRoute } from 'vue-router'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -294,6 +295,7 @@ import { tenantService } from '@/services/tenantService'
 
 const router = useRouter()
 const route = useRoute()
+const isMobile = useIsMobile()
 const groupsStore = useGroupsStore()
 const authStore = useAuthStore()
 
@@ -670,6 +672,17 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+
+@media (max-width: 959.98px) {
+  .agenda-header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .agenda-header-actions {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
 }
 
 .calendar-info {

@@ -247,7 +247,7 @@
     </div>
 
     <!-- Dialog de Audiência -->
-    <v-dialog v-model="audienciaDialog" max-width="600">
+    <v-dialog v-model="audienciaDialog" max-width="600" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="lg">
         <v-card-title class="pa-4 font-weight-bold d-flex align-center">
           <v-icon size="20" color="error" class="mr-2">mdi-gavel</v-icon>
@@ -342,6 +342,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { useRouter } from 'vue-router'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -353,6 +354,7 @@ import { useGroupsStore } from '@/stores/groups'
 import AppIcon from '@/components/AppIcon.vue'
 
 const router = useRouter()
+const isMobile = useIsMobile()
 const groupsStore = useGroupsStore()
 
 const groups = computed(() => groupsStore.groups)

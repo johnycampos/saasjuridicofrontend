@@ -243,7 +243,7 @@
     </v-col>
 
     <!-- Nova tarefa -->
-    <v-dialog v-model="showTarefaForm" max-width="400">
+    <v-dialog v-model="showTarefaForm" max-width="400" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl" :elevation="0" border>
         <v-card-title class="pa-5 pb-2">Nova Tarefa</v-card-title>
         <v-card-text class="pa-5 pt-2">
@@ -263,7 +263,7 @@
     </v-dialog>
 
     <!-- Novo link -->
-    <v-dialog v-model="showLinkForm" max-width="400">
+    <v-dialog v-model="showLinkForm" max-width="400" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl" :elevation="0" border>
         <v-card-title class="pa-5 pb-2">Novo Link</v-card-title>
         <v-card-text class="pa-5 pt-2">
@@ -291,7 +291,7 @@
     </v-dialog>
 
     <!-- Cadastrar telefone do cliente -->
-    <v-dialog v-model="telefoneDialog" max-width="400">
+    <v-dialog v-model="telefoneDialog" max-width="400" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl" :elevation="0" border>
         <v-card-title class="pa-5 pb-2">Cadastrar Telefone</v-card-title>
         <v-card-text class="pa-5 pt-2">
@@ -333,6 +333,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { isAfter, addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import DOMPurify from 'dompurify'
@@ -349,6 +350,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['resumo-atualizado', 'refresh'])
+const isMobile = useIsMobile()
 
 const notificationsStore = useNotificationsStore()
 

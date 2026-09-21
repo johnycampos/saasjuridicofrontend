@@ -60,6 +60,9 @@
         group="processos"
         item-key="id"
         class="col-drop"
+        :delay="150"
+        :delay-on-touch-only="true"
+        :touch-start-threshold="5"
         :move="onMove"
         @add="onCardAdded"
       >
@@ -271,4 +274,13 @@ export default { inheritAttrs: false }
   font-family: inherit;
 }
 .col-add-btn:hover { border-color: var(--navy); color: var(--navy); }
+
+/* Mobile Kanban (< 960px): scroll-snap uma coluna por vez */
+@media (max-width: 959.98px) {
+  .col {
+    width: calc(100vw - 40px);
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+}
 </style>

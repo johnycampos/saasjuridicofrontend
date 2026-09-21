@@ -4,7 +4,7 @@
   </v-container>
 
   <v-container v-else-if="processo" max-width="900" class="py-6">
-    <div class="d-flex align-center mb-6">
+    <div class="d-flex align-center mb-6 processo-header">
       <v-btn icon variant="text" @click="$router.back()">
         <v-icon>mdi-arrow-left</v-icon>
       </v-btn>
@@ -28,7 +28,7 @@
       @refresh="processoStore.fetchById(route.params.id)"
     />
 
-    <v-dialog v-model="showEditForm" max-width="700">
+    <v-dialog v-model="showEditForm" max-width="700" :fullscreen="isMobile" :scrollable="isMobile">
       <ProcessoForm
         :processo="processo"
         @saved="onSaved"
@@ -36,7 +36,7 @@
       />
     </v-dialog>
 
-    <v-dialog v-model="showMoveAreaDialog" max-width="480">
+    <v-dialog v-model="showMoveAreaDialog" max-width="480" :fullscreen="isMobile" :scrollable="isMobile">
       <MoveAreaDialog
         v-if="processo"
         :processo="processo"
@@ -49,6 +49,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { useRoute } from 'vue-router'
 import { useProcessosStore } from '@/stores/processos'
 import ProcessoForm from '@/components/processo/ProcessoForm.vue'
@@ -57,6 +58,7 @@ import MoveAreaDialog from '@/components/processo/MoveAreaDialog.vue'
 
 const route = useRoute()
 const processoStore = useProcessosStore()
+const isMobile = useIsMobile()
 
 const processo = computed(() => processoStore.currentProcesso)
 const loading = computed(() => processoStore.loading)
@@ -79,3 +81,17 @@ function onAreaMoved() {
   processoStore.fetchById(route.params.id)
 }
 </script>
+
+<style scoped>
+/* Mobile: header do processo não deve estourar largura */
+.processo-header {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+@media (min-width: 600px) {
+  .processo-header {
+    flex-wrap: nowrap;
+    row-gap: 0;
+  }
+}
+</style>

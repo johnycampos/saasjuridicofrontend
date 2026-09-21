@@ -29,7 +29,7 @@
           <template #title>{{ member.userNome || member.userEmail }}</template>
 
           <template #append>
-            <div class="d-flex align-center gap-2">
+            <div class="d-flex align-center gap-2 member-append">
               <v-chip size="small" :color="statusColor(member.status)" variant="tonal" class="mr-2">
                 {{ member.status === 'PENDING' ? 'Pendente' : 'Ativo' }}
               </v-chip>
@@ -57,7 +57,7 @@
     </v-card>
 
     <!-- Dialog: Adicionar Membro -->
-    <v-dialog v-model="addDialog" max-width="480" persistent>
+    <v-dialog v-model="addDialog" max-width="480" persistent :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl">
         <v-card-title class="pa-6 pb-2">Adicionar Membro</v-card-title>
         <v-card-text class="pa-6 pt-2">
@@ -142,7 +142,7 @@
     </v-dialog>
 
     <!-- Dialog: Confirmar Remoção -->
-    <v-dialog v-model="removeDialog" max-width="400">
+    <v-dialog v-model="removeDialog" max-width="400" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl">
         <v-card-title class="pa-6 pb-2">Remover Membro</v-card-title>
         <v-card-text class="pa-6 pt-2">
@@ -164,12 +164,14 @@
 
 <script setup>
 import { ref, computed, onMounted, watchEffect } from 'vue'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { useAuthStore } from '@/stores/auth'
 import { useGroupsStore } from '@/stores/groups'
 import { tenantService } from '@/services/tenantService'
 
 const authStore = useAuthStore()
 const groupsStore = useGroupsStore()
+const isMobile = useIsMobile()
 const members = ref([])
 const loading = ref(false)
 const myRole = ref(null)
@@ -308,3 +310,13 @@ function roleLabel(role) {
   return { OWNER: 'Proprietário', ADMIN: 'Admin', MEMBER: 'Membro', VIEWER: 'Visualizador' }[role] ?? role
 }
 </script>
+
+<style scoped>
+@media (max-width: 959.98px) {
+  .member-append {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 4px;
+  }
+}
+</style>

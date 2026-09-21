@@ -108,6 +108,9 @@
         item-key="id"
         handle=".column-handle"
         class="board-inner"
+        :delay="150"
+        :delay-on-touch-only="true"
+        :touch-start-threshold="5"
         @end="onColumnReorder"
       >
         <template #item="{ element: column }">
@@ -130,7 +133,7 @@
     </div>
 
     <!-- Column dialog -->
-    <v-dialog v-model="showColumnDialog" max-width="400">
+    <v-dialog v-model="showColumnDialog" max-width="400" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl" :elevation="0" border>
         <v-card-title class="pa-5 pb-2">{{ editingColumn ? 'Editar Coluna' : 'Nova Coluna' }}</v-card-title>
         <v-card-text class="pa-5 pt-2">
@@ -145,7 +148,7 @@
     </v-dialog>
 
     <!-- Processo form dialog -->
-    <v-dialog v-model="showProcessoForm" max-width="700">
+    <v-dialog v-model="showProcessoForm" max-width="700" :fullscreen="isMobile" :scrollable="isMobile">
       <ProcessoForm
         :processo="editingProcesso"
         :group-id="groupId"
@@ -156,7 +159,7 @@
     </v-dialog>
 
     <!-- Import de planilhas -->
-    <v-dialog v-model="showImportDialog" max-width="560">
+    <v-dialog v-model="showImportDialog" max-width="560" :fullscreen="isMobile" :scrollable="isMobile">
       <ImportPlanilhaDialog
         :group-id="groupId"
         @close="showImportDialog = false"
@@ -165,9 +168,9 @@
     </v-dialog>
 
     <!-- Processo detail dialog -->
-    <v-dialog v-model="showProcessoDetail" max-width="900">
+    <v-dialog v-model="showProcessoDetail" max-width="900" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card v-if="selectedProcesso" rounded="lg" class="pa-2">
-        <div class="d-flex align-center pa-4 pb-2">
+        <div class="d-flex align-center pa-4 pb-2 processo-detail-header">
           <div>
             <h2 class="text-h6 font-weight-bold">{{ selectedProcesso.clienteNome }}</h2>
             <p v-if="selectedProcesso.numeroProcesso" class="text-body-2 text-medium-emphasis">
@@ -191,7 +194,7 @@
     </v-dialog>
 
     <!-- Mudar de área -->
-    <v-dialog v-model="showMoveAreaDialog" max-width="480">
+    <v-dialog v-model="showMoveAreaDialog" max-width="480" :fullscreen="isMobile" :scrollable="isMobile">
       <MoveAreaDialog
         v-if="selectedProcesso"
         :processo="selectedProcesso"
@@ -216,11 +219,13 @@ import ProcessoDetail from '@/components/processo/ProcessoDetail.vue'
 import MoveAreaDialog from '@/components/processo/MoveAreaDialog.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import { diasAteProximoPrazo, isUrgente, isAtrasado } from '@/composables/useProcessoUrgencia'
+import { useIsMobile } from '@/composables/useIsMobile'
 
 const route = useRoute()
 const kanbanStore = useKanbanStore()
 const groupsStore = useGroupsStore()
 const settingsStore = useSettingsStore()
+const isMobile = useIsMobile()
 
 const groupId = computed(() => route.params.groupId)
 const currentGroup = computed(() => groupsStore.groups.find(g => g.id === groupId.value))
@@ -609,4 +614,38 @@ async function onProcessoSaved(processo) {
   transition: border-color 120ms, color 120ms;
 }
 .add-col-btn:hover { border-color: var(--navy); color: var(--navy); }
+
+/* Mobile: header do dialog de Processo não deve estourar largura */
+.processo-detail-header {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+@media (min-width: 600px) {
+  .processo-detail-header { flex-wrap: nowrap; row-gap: 0; }
+}
+
+/* Mobile Kanban (< 960px) */
+@media (max-width: 959.98px) {
+  .board-title-row,
+  .filter-bar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .board-meta {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    gap: 12px;
+  }
+
+  .board-area {
+    scroll-snap-type: x mandatory;
+  }
+
+  .add-col-btn {
+    width: calc(100vw - 40px);
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+}
 </style>

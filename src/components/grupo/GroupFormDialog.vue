@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="internalOpen" max-width="420">
+  <v-dialog v-model="internalOpen" max-width="420" :fullscreen="isMobile" :scrollable="isMobile">
     <v-card rounded="xl" :elevation="0" border>
       <v-card-title class="pa-5 pb-2">Nova Área</v-card-title>
       <v-card-text class="pa-5 pt-2">
@@ -17,6 +17,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { useGroupsStore } from '@/stores/groups'
 
 const props = defineProps({
@@ -25,6 +26,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'created'])
 
 const groupsStore = useGroupsStore()
+const isMobile = useIsMobile()
 const internalOpen = ref(props.modelValue)
 const loading = ref(false)
 const form = ref({ nome: '', descricao: '' })

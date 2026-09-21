@@ -1,7 +1,8 @@
 <template>
   <div class="shell">
-    <!-- Sidebar Rail -->
+    <!-- Sidebar Rail — desktop only (v-if preserva HTML/CSS intactos, sem risco de regressão) -->
     <aside
+      v-if="!isMobile"
       class="rail"
       :class="{ 'rail--open': sidebarOpen }"
       @mouseenter="sidebarOpen = true"
@@ -89,13 +90,112 @@
       </div>
     </aside>
 
+    <!-- Drawer mobile — separado, só em mobile, fecha ao navegar -->
+    <v-navigation-drawer
+      v-if="isMobile"
+      v-model="mobileDrawerOpen"
+      temporary
+      location="start"
+    >
+      <v-list nav density="compact">
+        <!-- Brand -->
+        <v-list-item class="mb-2" @click="navigateAndClose('/dashboard')">
+          <template #prepend>
+            <div class="brand-mark" style="margin-right:12px">J</div>
+          </template>
+          <div class="brand-name" style="font-size:15px">JurisFlow</div>
+          <div class="brand-tag">Gestão Jurídica</div>
+        </v-list-item>
+
+        <v-divider class="mb-2" />
+
+        <v-list-item
+          prepend-icon="mdi-view-dashboard-outline"
+          title="Dashboard"
+          :active="route.name === 'dashboard'"
+          @click="navigateAndClose('/dashboard')"
+        />
+
+        <v-list-subheader>Áreas</v-list-subheader>
+
+        <v-list-item
+          v-for="group in groups"
+          :key="group.id"
+          :title="group.nome"
+          :active="route.params.groupId === group.id"
+          @click="navigateAndClose({ name: 'kanban', params: { groupId: group.id } })"
+        >
+          <template #prepend>
+            <span
+              style="width:8px;height:8px;border-radius:3px;display:inline-block;margin-right:16px;flex-shrink:0"
+              :style="{ background: group.cor || 'var(--navy)' }"
+            />
+          </template>
+        </v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-plus"
+          title="Nova Área"
+          @click="showGroupDialog = true; mobileDrawerOpen = false"
+        />
+
+        <v-list-subheader>Equipe</v-list-subheader>
+
+        <v-list-item
+          prepend-icon="mdi-account-group-outline"
+          title="Equipe"
+          :active="route.name === 'membros'"
+          @click="navigateAndClose('/membros')"
+        />
+        <v-list-item
+          prepend-icon="mdi-briefcase-outline"
+          title="Clientes"
+          :active="route.name === 'clientes'"
+          @click="navigateAndClose('/clientes')"
+        />
+        <v-list-item
+          prepend-icon="mdi-trending-up"
+          title="Financeiro"
+          :active="route.name === 'financeiro'"
+          @click="navigateAndClose('/financeiro')"
+        />
+        <v-list-item
+          prepend-icon="mdi-calendar-outline"
+          title="Agenda"
+          :active="route.name === 'agenda'"
+          @click="navigateAndClose('/agenda')"
+        />
+
+        <v-divider class="my-2" />
+
+        <v-list-item
+          prepend-icon="mdi-logout"
+          title="Sair"
+          @click="handleLogout"
+        />
+      </v-list>
+    </v-navigation-drawer>
+
     <!-- Main -->
     <div class="main">
       <!-- Topbar -->
       <header class="topbar">
+        <!-- Hamburger — só em mobile, abre o drawer -->
+        <button
+          v-if="isMobile"
+          class="icon-btn"
+          aria-label="Menu"
+          @click="mobileDrawerOpen = true"
+        >
+          <app-icon name="menu" :size="18" />
+        </button>
+
         <div class="crumb">
-          <span class="crumb-item">JurisFlow</span>
-          <app-icon name="chevronR" :size="12" class="crumb-sep" />
+          <!-- "JurisFlow /" some em mobile (só mostra nome da página) -->
+          <template v-if="!isMobile">
+            <span class="crumb-item">JurisFlow</span>
+            <app-icon name="chevronR" :size="12" class="crumb-sep" />
+          </template>
           <span class="crumb-item crumb-active">{{ pageTitle }}</span>
         </div>
 
@@ -115,7 +215,8 @@
 
         <div style="flex-grow: 1" />
 
-        <div class="topbar-search">
+        <!-- Busca: ícone expansível em mobile, caixa normal em desktop -->
+        <div v-if="!isMobile" class="topbar-search">
           <app-icon name="search" :size="14" />
           <input
             v-model="searchQuery"
@@ -145,6 +246,47 @@
             <div v-else class="search-result-empty">Nenhum processo encontrado</div>
           </div>
         </div>
+
+        <!-- Busca expansível em mobile -->
+        <template v-else>
+          <div v-if="mobileSearchOpen" class="topbar-search topbar-search--mobile-expanded">
+            <app-icon name="search" :size="14" />
+            <input
+              ref="mobileSearchInputRef"
+              v-model="searchQuery"
+              type="text"
+              class="topbar-search-input"
+              placeholder="Buscar…"
+              @focus="searchFocused = true"
+              @blur="onSearchBlur"
+            />
+            <button class="icon-btn" style="width:24px;height:24px;flex-shrink:0" aria-label="Fechar busca" @click="mobileSearchOpen = false; searchQuery = ''">
+              <app-icon name="close" :size="14" />
+            </button>
+
+            <div v-if="showSearchResults" class="search-results">
+              <div v-if="searchLoading" class="search-result-empty">Buscando…</div>
+              <template v-else-if="searchResults.length">
+                <div
+                  v-for="p in searchResults"
+                  :key="p.id"
+                  class="search-result-item"
+                  @click="goToProcesso(p)"
+                >
+                  <div class="search-result-title">{{ p.clienteNome || 'Sem cliente' }}</div>
+                  <div class="search-result-sub">
+                    {{ p.numeroProcesso || 'Sem número' }}<span v-if="p.tipoAcao"> · {{ p.tipoAcao }}</span>
+                  </div>
+                </div>
+              </template>
+              <div v-else class="search-result-empty">Nenhum processo encontrado</div>
+            </div>
+          </div>
+
+          <button v-else class="icon-btn" aria-label="Buscar" @click="openMobileSearch">
+            <app-icon name="search" :size="17" />
+          </button>
+        </template>
 
         <div ref="notifWrapperRef" class="icon-btn notif-btn" title="Notificações" @click="toggleNotif">
           <app-icon name="bell" :size="17" />
@@ -193,7 +335,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGroupsStore } from '@/stores/groups'
@@ -201,6 +343,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { useKanbanStore } from '@/stores/kanban'
 import { processoService } from '@/services/processoService'
 import { isAtrasado } from '@/composables/useProcessoUrgencia'
+import { useIsMobile } from '@/composables/useIsMobile'
 import AppIcon from '@/components/AppIcon.vue'
 import TweaksPanel from '@/components/TweaksPanel.vue'
 import GroupFormDialog from '@/components/grupo/GroupFormDialog.vue'
@@ -211,10 +354,29 @@ const authStore = useAuthStore()
 const groupsStore = useGroupsStore()
 const notificationsStore = useNotificationsStore()
 const kanbanStore = useKanbanStore()
+const isMobile = useIsMobile()
 const sidebarOpen = ref(false)
 const tweaksOpen = ref(false)
 const showGroupDialog = ref(false)
 const currentView = ref('kanban')
+
+// Estado mobile
+const mobileDrawerOpen = ref(false)
+const mobileSearchOpen = ref(false)
+const mobileSearchInputRef = ref(null)
+
+/** Navega e fecha o drawer mobile (evita drawer aberto sobre a nova página) */
+function navigateAndClose(to) {
+  mobileDrawerOpen.value = false
+  router.push(to)
+}
+
+/** Abre a busca expansível em mobile e foca o input */
+async function openMobileSearch() {
+  mobileSearchOpen.value = true
+  await nextTick()
+  mobileSearchInputRef.value?.focus()
+}
 
 // Busca global de processos (topbar, comum a todas as páginas)
 const searchQuery = ref('')
@@ -251,6 +413,7 @@ function goToProcesso(processo) {
   searchQuery.value = ''
   searchResults.value = []
   searchFocused.value = false
+  mobileSearchOpen.value = false
   router.push({ name: 'processo-detail', params: { id: processo.id } })
 }
 
@@ -729,5 +892,32 @@ kbd {
   overflow: auto;
   position: relative;
   background: var(--bg);
+}
+
+/* ── Mobile (< 960px) ────────────────────────────────────────────────────── */
+@media (max-width: 959.98px) {
+  /* Shell vira coluna única (sidebar some, v-navigation-drawer assume) */
+  .shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Busca expansível mobile — ocupa toda a largura disponível na topbar */
+.topbar-search--mobile-expanded {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  width: auto;
+}
+
+/* Rede de segurança para notif-panel e search-results em telas muito estreitas */
+@media (max-width: 400px) {
+  .notif-panel,
+  .search-results {
+    right: 0;
+    left: 0;
+    width: 100%;
+    border-radius: 0 0 12px 12px;
+  }
 }
 </style>

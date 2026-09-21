@@ -90,7 +90,7 @@
     </v-card-actions>
 
     <!-- Quick-create Cliente -->
-    <v-dialog v-model="showClienteDialog" max-width="400">
+    <v-dialog v-model="showClienteDialog" max-width="400" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl" :elevation="0" border>
         <v-card-title class="pa-5 pb-2">Novo Cliente</v-card-title>
         <v-card-text class="pa-5 pt-2">
@@ -107,7 +107,7 @@
     </v-dialog>
 
     <!-- Quick-create Tribunal -->
-    <v-dialog v-model="showTribunalDialog" max-width="400">
+    <v-dialog v-model="showTribunalDialog" max-width="400" :fullscreen="isMobile" :scrollable="isMobile">
       <v-card rounded="xl" :elevation="0" border>
         <v-card-title class="pa-5 pb-2">Nova Opção de Tribunal</v-card-title>
         <v-card-text class="pa-5 pt-2">
@@ -128,6 +128,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { useProcessosStore } from '@/stores/processos'
 import { clienteService } from '@/services/clienteService'
 import { tribunalService } from '@/services/tribunalService'
@@ -142,6 +143,7 @@ const props = defineProps({
 const emit = defineEmits(['saved', 'close'])
 
 const processoStore = useProcessosStore()
+const isMobile = useIsMobile()
 const formRef = ref(null)
 const valid = ref(false)
 const loading = ref(false)
