@@ -19,3 +19,10 @@ Visual architecture and sequence diagrams are maintained in `../docs/architectur
 When adding major frontend architectural components (e.g. new stores, services, layouts, router guards):
 1. Update `../docs/architecture/frontend-architecture.architecture.json`
 2. Recompile with Archify: `node <archify-dir>/bin/archify.mjs deliver architecture ../docs/architecture/frontend-architecture.architecture.json ../docs/architecture/frontend-architecture.html --quality showcase --json`
+
+## Integrações IA / MCP — regras ao mexer
+Docs: `../docs/mcp/README.md` · **Pendências abertas: `../docs/mcp/PENDENCIAS.md`** · Diagrama: `../docs/architecture/mcp-oauth.html`.
+- `pages/IntegracoesPage.vue` (`/integracoes`): tokens MCP manuais (`services/mcpService.js`; token em claro só é mostrado uma vez e é limpo ao fechar/sair/trocar de escritório) e "Apps conectados" via OAuth (revogar).
+- `pages/OAuthAuthorizePage.vue` (`/oauth/autorizar?req=`): consentimento OAuth (`services/oauthService.js`) — mostra app e domínio de redirect, escolha do escritório, Autorizar/Negar (`window.location` para o `redirectUrl` do backend). Não exige `X-Tenant-ID`.
+- `router/index.js`: guarda a rota pedida em `sessionStorage('jf_return_to')` antes do login e volta a ela depois (só caminhos internos `/`, nunca `//`); usar `next(returnTo)` com string para não perder a query.
+- `nginx.conf`/`vite.config.js` fazem proxy de `/mcp` para o backend (Docker Compose/dev); em produção a URL do MCP é `VITE_API_URL + /mcp`.
