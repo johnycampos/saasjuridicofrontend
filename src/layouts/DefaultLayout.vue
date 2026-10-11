@@ -71,6 +71,11 @@
           <span class="nav-label" :class="{ visible: sidebarOpen }">Agenda</span>
         </div>
 
+        <div class="nav-item" :class="{ active: route.name === 'integracoes' }" @click="router.push('/integracoes')">
+          <app-icon name="paperclip" :size="16" :stroke-width="route.name === 'integracoes' ? 2 : 1.6" />
+          <span class="nav-label" :class="{ visible: sidebarOpen }">Integrações IA</span>
+        </div>
+
         <div class="nav-item">
           <app-icon name="settings" :size="16" :stroke-width="1.6" />
           <span class="nav-label" :class="{ visible: sidebarOpen }">Configurações</span>
@@ -165,6 +170,13 @@
           title="Agenda"
           :active="route.name === 'agenda'"
           @click="navigateAndClose('/agenda')"
+        />
+
+        <v-list-item
+          prepend-icon="mdi-connection"
+          title="Integrações IA"
+          :active="route.name === 'integracoes'"
+          @click="navigateAndClose('/integracoes')"
         />
 
         <v-divider class="my-2" />
@@ -501,7 +513,7 @@ const viewTabs = [
 const groups = computed(() => groupsStore.groups)
 
 const pageTitle = computed(() => {
-  const titles = { dashboard: 'Dashboard', kanban: 'Quadro', membros: 'Equipe', 'processo-detail': 'Processo', financeiro: 'Financeiro', clientes: 'Clientes', agenda: 'Agenda' }
+  const titles = { dashboard: 'Dashboard', kanban: 'Quadro', membros: 'Equipe', 'processo-detail': 'Processo', financeiro: 'Financeiro', clientes: 'Clientes', agenda: 'Agenda', integracoes: 'Integrações IA' }
   return titles[route.name] || 'JurisFlow'
 })
 

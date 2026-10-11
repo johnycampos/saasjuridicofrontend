@@ -48,7 +48,7 @@ export default defineConfig({
       workbox: {
         // Exclui rotas OAuth do service worker — sem isso o SW devolveria
         // index.html em vez de deixar o redirect OAuth passar pelo nginx.
-        navigateFallbackDenylist: [/^\/oauth2/, /^\/login\/oauth2/],
+        navigateFallbackDenylist: [/^\/oauth2/, /^\/login\/oauth2/, /^\/mcp(?:\/|$)/],
         // Sem runtimeCaching para /api: no modo generateSW do Workbox,
         // não escrever regra = chamada vai direto para a rede. Dados
         // jurídicos sensíveis nunca devem ser cacheados no SW.
@@ -65,6 +65,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/mcp': { target: 'http://localhost:8080', changeOrigin: true },
       '/oauth2': { target: 'http://localhost:8080', changeOrigin: true },
       '/login': { target: 'http://localhost:8080', changeOrigin: true }
     }

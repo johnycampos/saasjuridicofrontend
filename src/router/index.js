@@ -26,8 +26,17 @@ const routes = [
       { path: 'processos/:id', name: 'processo-detail', component: () => import('@/pages/ProcessoDetailPage.vue'), meta: { title: 'Processo' } },
       { path: 'membros', name: 'membros', component: () => import('@/pages/MembersPage.vue'), meta: { title: 'Membros' } },
       { path: 'clientes', name: 'clientes', component: () => import('@/pages/ClientesPage.vue'), meta: { title: 'Clientes' } },
+      { path: 'integracoes', name: 'integracoes', component: () => import('@/pages/IntegracoesPage.vue'), meta: { title: 'Integrações IA' } },
       { path: 'financeiro', name: 'financeiro', component: () => import('@/pages/FinanceiroPage.vue'), meta: { title: 'Financeiro' } },
       { path: 'agenda', name: 'agenda', component: () => import('@/pages/AgendaPage.vue'), meta: { title: 'Agenda' } }
+    ]
+  },
+  {
+    path: '/oauth/autorizar',
+    component: () => import('@/layouts/AuthLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', name: 'oauth-authorize', component: () => import('@/pages/OAuthAuthorizePage.vue'), meta: { title: 'Autorizar Aplicativo' } }
     ]
   },
   {
@@ -51,11 +60,22 @@ router.beforeEach((to, from, next) => {
       authStore.setCurrentTenant(to.query.tenantId)
     }
     authStore.fetchMe()
+
+    const returnTo = sessionStorage.getItem('jf_return_to')
+    if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+      sessionStorage.removeItem('jf_return_to')
+      next(returnTo)
+      return
+    }
+
     next({ path: to.path, replace: true })
     return
   }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    if (to.fullPath && to.fullPath.startsWith('/') && !to.fullPath.startsWith('//') && to.path !== '/login') {
+      sessionStorage.setItem('jf_return_to', to.fullPath)
+    }
     next('/login')
     return
   }
