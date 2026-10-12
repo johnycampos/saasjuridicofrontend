@@ -54,8 +54,16 @@
           <p class="text-h6 mt-2 mb-1">Importação concluída</p>
           <p class="text-body-2 text-medium-emphasis">
             {{ result.colunasCriadas }} coluna(s) criada(s) · {{ result.processosCriados }} processo(s) importado(s)
+            <br />{{ result.clientesCriados ?? 0 }} cliente(s) novo(s) cadastrado(s)
           </p>
         </div>
+
+        <v-alert v-if="result.avisos?.length" type="warning" variant="tonal" density="compact" class="mt-3">
+          <p class="text-body-2 font-weight-medium mb-1">Avisos da planilha:</p>
+          <ul class="text-body-2 pl-4">
+            <li v-for="(aviso, i) in result.avisos" :key="i">{{ aviso }}</li>
+          </ul>
+        </v-alert>
 
         <v-alert v-if="result.erros.length" type="warning" variant="tonal" density="compact" class="mt-3">
           <p class="text-body-2 font-weight-medium mb-1">{{ result.erros.length }} linha(s) não importada(s):</p>

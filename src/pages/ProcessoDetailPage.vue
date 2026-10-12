@@ -18,10 +18,14 @@
       <v-chip v-if="processo.prioridadeMaisUrgente" :color="prioridadeColor" variant="tonal" class="mr-2">
         {{ processo.prioridadeMaisUrgente }}
       </v-chip>
-      <v-btn variant="outlined" class="mr-2" @click="showMoveAreaDialog = true">Mudar de Área</v-btn>
+      <v-btn v-if="processo.status !== 'ARQUIVADO'" variant="outlined" class="mr-2" @click="showMoveAreaDialog = true">Mudar de Área</v-btn>
+      <v-btn v-if="canWrite" variant="outlined" class="mr-2" @click="showArchiveDialog = true">{{ processo.status === 'ARQUIVADO' ? 'Desarquivar' : 'Arquivar' }}</v-btn>
       <v-btn color="primary" variant="outlined" @click="showEditForm = true">Editar</v-btn>
     </div>
 
+    <v-alert v-if="processo.status === 'ARQUIVADO'" type="info" variant="tonal" class="mb-4">Processo arquivado</v-alert>
+    <ArchiveProcessoDialog v-model="showArchiveDialog" :processo="processo" @changed="onArchiveChanged" />
+    <v-snackbar v-model="archiveSnackbar">Processo desarquivado com sucesso.</v-snackbar>
     <ProcessoDetail
       :processo="processo"
       @resumo-atualizado="processoStore.patchCurrentProcesso"
@@ -50,13 +54,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useIsMobile } from '@/composables/useIsMobile'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import ArchiveProcessoDialog from '@/components/processo/ArchiveProcessoDialog.vue'
+import { useTenantWriteAccess } from '@/composables/useTenantWriteAccess'
 import { useProcessosStore } from '@/stores/processos'
 import ProcessoForm from '@/components/processo/ProcessoForm.vue'
 import ProcessoDetail from '@/components/processo/ProcessoDetail.vue'
 import MoveAreaDialog from '@/components/processo/MoveAreaDialog.vue'
 
 const route = useRoute()
+const router = useRouter()
+const { canWrite } = useTenantWriteAccess()
+const showArchiveDialog = ref(false), archiveSnackbar = ref(false)
 const processoStore = useProcessosStore()
 const isMobile = useIsMobile()
 
@@ -70,6 +79,11 @@ onMounted(() => processoStore.fetchById(route.params.id))
 const prioridadeColor = computed(() => ({
   BAIXA: 'success', MEDIA: 'info', ALTA: 'warning', URGENTE: 'error'
 }[processo.value?.prioridadeMaisUrgente] ?? 'default'))
+
+async function onArchiveChanged(processo) {
+  if (processo.status === 'ARQUIVADO') await router.push({ path: '/arquivados', query: { arquivado: '1' } })
+  else { await processoStore.fetchById(route.params.id); archiveSnackbar.value = true }
+}
 
 function onSaved() {
   processoStore.fetchById(route.params.id)

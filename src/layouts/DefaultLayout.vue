@@ -71,6 +71,11 @@
           <span class="nav-label" :class="{ visible: sidebarOpen }">Agenda</span>
         </div>
 
+        <div class="nav-item" :class="{ active: route.name === 'arquivados' }" @click="router.push('/arquivados')">
+          <app-icon name="archive" :size="16" :stroke-width="route.name === 'arquivados' ? 2 : 1.6" />
+          <span class="nav-label" :class="{ visible: sidebarOpen }">Arquivados</span>
+        </div>
+
         <div class="nav-item" :class="{ active: route.name === 'integracoes' }" @click="router.push('/integracoes')">
           <app-icon name="paperclip" :size="16" :stroke-width="route.name === 'integracoes' ? 2 : 1.6" />
           <span class="nav-label" :class="{ visible: sidebarOpen }">Integrações IA</span>
@@ -172,6 +177,12 @@
           @click="navigateAndClose('/agenda')"
         />
 
+        <v-list-item
+          prepend-icon="mdi-archive-outline"
+          title="Arquivados"
+          :active="route.name === 'arquivados'"
+          @click="navigateAndClose('/arquivados')"
+        />
         <v-list-item
           prepend-icon="mdi-connection"
           title="Integrações IA"
@@ -513,7 +524,7 @@ const viewTabs = [
 const groups = computed(() => groupsStore.groups)
 
 const pageTitle = computed(() => {
-  const titles = { dashboard: 'Dashboard', kanban: 'Quadro', membros: 'Equipe', 'processo-detail': 'Processo', financeiro: 'Financeiro', clientes: 'Clientes', agenda: 'Agenda', integracoes: 'Integrações IA' }
+  const titles = { dashboard: 'Dashboard', kanban: 'Quadro', membros: 'Equipe', 'processo-detail': 'Processo', financeiro: 'Financeiro', clientes: 'Clientes', agenda: 'Agenda', arquivados: 'Arquivados', integracoes: 'Integrações IA' }
   return titles[route.name] || 'JurisFlow'
 })
 

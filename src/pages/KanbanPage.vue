@@ -223,17 +223,22 @@
           <v-chip v-if="selectedProcesso.prioridadeMaisUrgente" :color="prioridadeColor(selectedProcesso.prioridadeMaisUrgente)" variant="tonal" class="mr-2">
             {{ selectedProcesso.prioridadeMaisUrgente }}
           </v-chip>
-          <v-btn variant="outlined" class="mr-2" @click="showMoveAreaDialog = true">Mudar de Área</v-btn>
+          <v-btn v-if="selectedProcesso.status !== 'ARQUIVADO'" variant="outlined" class="mr-2" @click="showMoveAreaDialog = true">Mudar de Área</v-btn>
+          <v-btn v-if="canWrite" variant="outlined" class="mr-2" @click="showArchiveDialog = true">{{ selectedProcesso.status === 'ARQUIVADO' ? 'Desarquivar' : 'Arquivar' }}</v-btn>
           <v-btn color="primary" variant="outlined" class="mr-2" @click="editFromDetail">Editar</v-btn>
           <v-btn icon variant="text" @click="showProcessoDetail = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </div>
         <v-card-text>
+          <v-alert v-if="selectedProcesso.status === 'ARQUIVADO'" type="info" variant="tonal" class="mb-4">Processo arquivado</v-alert>
           <ProcessoDetail :processo="selectedProcesso" @resumo-atualizado="onResumoAtualizado" />
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <ArchiveProcessoDialog v-model="showArchiveDialog" :processo="selectedProcesso" @changed="onArchiveChanged" />
+    <v-snackbar v-model="archiveSnackbar">{{ archiveMessage }}</v-snackbar>
 
     <!-- Mudar de área -->
     <v-dialog v-model="showMoveAreaDialog" max-width="480" :fullscreen="isMobile" :scrollable="isMobile">
@@ -249,6 +254,8 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import ArchiveProcessoDialog from '@/components/processo/ArchiveProcessoDialog.vue'
+import { useTenantWriteAccess } from '@/composables/useTenantWriteAccess'
 import { useRoute } from 'vue-router'
 import draggable from 'vuedraggable'
 import { useKanbanStore } from '@/stores/kanban'
@@ -292,6 +299,8 @@ const showProcessoForm = ref(false)
 const showProcessoDetail = ref(false)
 const showImportDialog = ref(false)
 const showMoveAreaDialog = ref(false)
+const showArchiveDialog = ref(false), archiveSnackbar = ref(false), archiveMessage = ref('')
+const { canWrite } = useTenantWriteAccess()
 const selectedProcesso = ref(null)
 const editingProcesso = ref(null)
 const selectedColumnId = ref(null)
@@ -423,6 +432,14 @@ function onAreaMoved(processo) {
   showMoveAreaDialog.value = false
   showProcessoDetail.value = false
   selectedProcesso.value = null
+}
+
+async function onArchiveChanged(processo) {
+  showProcessoDetail.value = false
+  selectedProcesso.value = null
+  archiveMessage.value = processo.status === 'ARQUIVADO' ? 'Processo arquivado com sucesso.' : 'Processo desarquivado com sucesso.'
+  archiveSnackbar.value = true
+  await loadBoardSafe(groupId.value)
 }
 
 function editFromDetail() {
